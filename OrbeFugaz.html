@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orbe Fugaz</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <!-- Biblioteca de Áudio Tone.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            overflow: hidden; /* Evita barras de rolagem */
+        }
+        canvas {
+            background: radial-gradient(circle, #1a202c, #111);
+            display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
+            z-index: 0;
+        }
+        .ui-element {
+            position: relative;
+            z-index: 10;
+        }
+        .neon-text {
+            text-shadow:
+                0 0 5px rgba(79, 70, 229, 0.8),
+                0 0 10px rgba(79, 70, 229, 0.8),
+                0 0 20px rgba(79, 70, 229, 0.8),
+                0 0 40px rgba(165, 55, 253, 0.8),
+                0 0 80px rgba(165, 55, 253, 0.6);
+        }
+        .modal-bg {
+            background-color: rgba(17, 17, 17, 0.6);
+            backdrop-filter: blur(10px);
+        }
+        .upgrade-card {
+            background-color: rgba(30, 41, 59, 0.8);
+            border: 1px solid rgba(71, 85, 105, 0.5);
+        }
+        .buy-btn:disabled, .stage-btn:disabled {
+            background-color: #4b5563;
+            cursor: not-allowed;
+            opacity: 0.6;
+        }
+        /* Estilo para checkboxes do Mod Menu */
+        .mod-checkbox {
+            appearance: none;
+            background-color: #374151;
+            border: 2px solid #6b7280;
+            border-radius: 4px;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            position: relative;
+            top: 4px;
+        }
+        .mod-checkbox:checked {
+            background-color: #4f46e5;
+            border-color: #818cf8;
+        }
+        .mod-checkbox:checked::after {
+            content: '✓';
+            color: white;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white select-none">
+
+    <!-- Canvas do Jogo -->
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Interface do Usuário -->
+    <div id="gameUi" class="absolute top-0 left-0 w-full p-6 flex justify-between items-center text-lg ui-element" style="display: none;">
+        <div>
+            <span>Pontuação: </span><span id="scoreEl">0</span>
+        </div>
+        <div>
+            <!-- Coin Icon SVG -->
+            <svg class="w-6 h-6 inline-block -mt-1" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15c-2.06 0-3.88-.93-5.13-2.36l1.42-1.42C9.21 14.13 10.53 15 12 15s2.79-.87 3.71-1.78l1.42 1.42C15.88 16.07 14.06 17 12 17zm-1-5H9.5v-2H11V8h2v2h1.5v2H13v2h-2v-2z" fill="#fbbF24"></path></svg>
+            <span id="coinsEl">0</span>
+        </div>
+        <div>
+            <span>Tempo: </span><span id="timeEl">0</span>s
+        </div>
+        <div>
+            <span>Recorde da Fase: </span><span id="highScoreEl">0</span>s
+        </div>
+    </div>
+
+    <!-- Status do Power-up -->
+    <div id="powerUpStatusEl" class="absolute bottom-0 left-0 w-full p-6 flex flex-col items-center gap-2 text-xl ui-element">
+        <!-- Conteúdo injetado via JS -->
+    </div>
+    
+    <!-- Modal de Menu Inicial / Fim de Jogo -->
+    <div id="modalEl" class="fixed inset-0 flex items-center justify-center ui-element" style="display: none;">
+        <div class="modal-bg rounded-2xl p-8 md:p-12 text-center max-w-md w-11/12">
+            <h1 id="modalTitle" class="text-4xl md:text-5xl font-bold neon-text">Orbe Fugaz</h1>
+            <div id="endGameStats" style="display: none;">
+                <p id="modalTimeEl" class="text-6xl md:text-8xl font-bold mt-4">0<span class="text-4xl">s</span></p>
+                <p class="text-gray-300 mt-2">Pontuação Final: <span id="modalScoreEl">0</span></p>
+                <p class="text-amber-400 mt-2">Moedas Coletadas: <span id="modalCoinsEl">0</span></p>
+            </div>
+             <div class="flex gap-4 justify-center mt-8">
+                <button id="playBtn" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 px-8 rounded-lg text-xl transition duration-300 transform hover:scale-105 shadow-lg shadow-indigo-600/50">
+                    Jogar
+                </button>
+                <button id="upgradeBtn" class="bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold py-3 px-8 rounded-lg text-xl transition duration-300 transform hover:scale-105 shadow-lg shadow-amber-500/50">
+                    Upgrades
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Modal de Seleção de Fase -->
+    <div id="stageSelectionModalEl" class="fixed inset-0 flex-col items-center justify-center ui-element p-4" style="display: none;">
+        <div class="modal-bg rounded-2xl p-8 text-center w-full max-w-2xl">
+            <h1 class="text-4xl font-bold neon-text mb-6">Selecionar Fase</h1>
+            <div id="stagesContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <!-- Cards de Fase injetados aqui -->
+            </div>
+            <button id="closeStageBtn" class="mt-8 bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg text-lg transition duration-300">Voltar</button>
+        </div>
+    </div>
+
+    <!-- Modal de Upgrades -->
+    <div id="upgradeModalEl" class="fixed inset-0 flex-col items-center justify-center ui-element p-4" style="display: none;">
+        <div class="modal-bg rounded-2xl p-8 text-center w-full max-w-4xl">
+            <h1 class="text-4xl font-bold neon-text mb-2">Melhorias</h1>
+            <p class="text-amber-400 text-2xl mb-6">Total de Moedas: <span id="totalCoinsEl">0</span></p>
+            <div id="upgradesContainer" class="grid grid-cols-1 md:grid-cols-3 gap-4 text-left">
+                <!-- Cards de Upgrade injetados aqui -->
+            </div>
+            <button id="closeUpgradeBtn" class="mt-8 bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg text-lg transition duration-300">Voltar</button>
+        </div>
+    </div>
+    
+    <!-- Modal de Mods -->
+    <div id="modMenuEl" class="fixed inset-0 flex-col items-center justify-center ui-element p-4" style="display: none;">
+        <div class="modal-bg rounded-2xl p-8 text-center w-full max-w-sm">
+            <h1 class="text-3xl font-bold neon-text mb-6">Mod Menu</h1>
+            <div class="space-y-4 text-left text-lg">
+                <div>
+                    <label for="godModeCheckbox" class="cursor-pointer">
+                        <input type="checkbox" id="godModeCheckbox" class="mod-checkbox">
+                        <span class="ml-2">God Mode (Invencível)</span>
+                    </label>
+                </div>
+                <div>
+                    <label for="xpMultiplierCheckbox" class="cursor-pointer">
+                        <input type="checkbox" id="xpMultiplierCheckbox" class="mod-checkbox">
+                         <span class="ml-2">XP 50x</span>
+                    </label>
+                </div>
+                <div class="border-t border-gray-600 my-4 pt-4">
+                    <label class="block mb-2">Gerenciar Moedas</label>
+                    <div class="flex gap-2">
+                        <button id="addCoinsBtn" class="w-full bg-green-600 hover:bg-green-500 text-white font-bold py-1 px-2 rounded text-sm">+100 Moedas</button>
+                        <button id="removeCoinsBtn" class="w-full bg-yellow-600 hover:bg-yellow-500 text-white font-bold py-1 px-2 rounded text-sm">-100 Moedas</button>
+                    </div>
+                </div>
+                <div class="border-t border-gray-600 my-4 pt-4">
+                    <button id="resetGameBtn" class="w-full bg-red-700 hover:bg-red-600 text-white font-bold py-2 px-4 rounded">
+                        Resetar Jogo Completo
+                    </button>
+                </div>
+            </div>
+            <button id="closeModMenuBtn" class="mt-8 bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg text-lg transition duration-300">Fechar</button>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação de Reset (NOVO) -->
+    <div id="confirmResetModalEl" class="fixed inset-0 flex-col items-center justify-center ui-element p-4" style="display: none;">
+        <div class="modal-bg rounded-2xl p-8 text-center w-full max-w-md">
+            <h1 class="text-2xl font-bold text-yellow-400 mb-4">Atenção</h1>
+            <p class="text-lg mb-6">Você tem certeza que deseja resetar todo o progresso? Esta ação não pode ser desfeita.</p>
+            <div class="flex gap-4 justify-center">
+                <button id="confirmResetBtn" class="bg-red-700 hover:bg-red-600 text-white font-bold py-2 px-6 rounded-lg">Confirmar Reset</button>
+                <button id="cancelResetBtn" class="bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+
+    <script>
+        // --- Configuração Inicial ---
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameUi = document.getElementById('gameUi');
+        const coinsEl = document.getElementById('coinsEl');
+        const modalCoinsEl = document.getElementById('modalCoinsEl');
+        const upgradeBtn = document.getElementById('upgradeBtn');
+        const upgradeModalEl = document.getElementById('upgradeModalEl');
+        const closeUpgradeBtn = document.getElementById('closeUpgradeBtn');
+        const upgradesContainer = document.getElementById('upgradesContainer');
+        const totalCoinsEl = document.getElementById('totalCoinsEl');
+        const scoreEl = document.getElementById('scoreEl');
+        const timeEl = document.getElementById('timeEl');
+        const highScoreEl = document.getElementById('highScoreEl');
+        const powerUpStatusEl = document.getElementById('powerUpStatusEl');
+        const modalEl = document.getElementById('modalEl');
+        const modalScoreEl = document.getElementById('modalScoreEl');
+        const modalTimeEl = document.getElementById('modalTimeEl');
+        const playBtn = document.getElementById('playBtn');
+        const modalTitle = document.getElementById('modalTitle');
+        const endGameStats = document.getElementById('endGameStats');
+        const stageSelectionModalEl = document.getElementById('stageSelectionModalEl');
+        const stagesContainer = document.getElementById('stagesContainer');
+        const closeStageBtn = document.getElementById('closeStageBtn');
+        // Mod Menu Elements
+        const modMenuEl = document.getElementById('modMenuEl');
+        const godModeCheckbox = document.getElementById('godModeCheckbox');
+        const xpMultiplierCheckbox = document.getElementById('xpMultiplierCheckbox');
+        const closeModMenuBtn = document.getElementById('closeModMenuBtn');
+        const addCoinsBtn = document.getElementById('addCoinsBtn');
+        const removeCoinsBtn = document.getElementById('removeCoinsBtn');
+        const resetGameBtn = document.getElementById('resetGameBtn');
+        // Reset Confirmation Elements
+        const confirmResetModalEl = document.getElementById('confirmResetModalEl');
+        const confirmResetBtn = document.getElementById('confirmResetBtn');
+        const cancelResetBtn = document.getElementById('cancelResetBtn');
+
+
+        let animationId;
+        let score = 0, frames = 0, gameTime = 0, coins = 0;
+        const originalPlayerRadius = 12;
+        let activePowerUps = [];
+        let isGameRunning = false;
+        
+        // --- Mod Variables ---
+        let isGodMode = false;
+        let xpMultiplier = 1;
+
+        // --- Dados do Jogo ---
+        let totalCoins = 0;
+        let upgrades = {};
+        let highScores = {};
+        let unlockedStages = ['stage1'];
+        let currentStageId = 'stage1';
+
+        const STAGES = {
+            stage1: {
+                name: 'Névoa Cósmica',
+                scoreToUnlockNext: 2500,
+                nextStage: 'stage2',
+                musicNotes: ["C3", "D3", "E3", "G3", "A3", "G3", "E3", "D3"],
+                enemyTypes: ['normal']
+            },
+            stage2: {
+                name: 'Tempestade Solar',
+                scoreToUnlockNext: 10000, // para uma futura fase 3
+                nextStage: 'stage3',
+                musicNotes: ["F#3", "G#3", "A#3", "C#4", "D#4", "C#4", "A#3", "G#3"],
+                enemyTypes: ['normal', 'fast', 'wavy']
+            }
+        };
+
+        const UPGRADE_DATA = {
+            immunity: { name: 'Imunidade', baseDuration: 5000, durationIncrease: 500, baseCost: 10 },
+            shrink: { name: 'Encolher', baseDuration: 7000, durationIncrease: 700, baseCost: 10 },
+            timeStop: { name: 'Tempo Parado', baseDuration: 5000, durationIncrease: 500, baseCost: 15 },
+            slowMotion: { name: 'Câmera Lenta', baseDuration: 7000, durationIncrease: 700, baseCost: 15 },
+            magnet: { name: 'Ímã de Coleta', baseDuration: 10000, durationIncrease: 1000, baseCost: 20 },
+        };
+
+        // --- Configuração de Áudio (Tone.js) ---
+        let synth, musicLoop;
+        const sfx = {
+            collect: new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.2 } }).toDestination(),
+            coin: new Tone.Synth({ oscillator: { type: "square" }, envelope: { attack: 0.01, decay: 0.05, sustain: 0.1, release: 0.1 } }).toDestination(),
+            powerup: new Tone.Synth({ oscillator: { type: "triangle8" }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.3 } }).toDestination(),
+            gameOver: new Tone.Synth({ oscillator: { type: "fmsquare" }, envelope: { attack: 0.01, decay: 0.5, sustain: 0.1, release: 0.8 } }).toDestination(),
+            upgrade: new Tone.Synth({ oscillator: { type: "sawtooth" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.2 } }).toDestination(),
+        };
+        let musicNoteIndex = 0;
+        let currentMusicNotes = STAGES.stage1.musicNotes;
+
+        function setupAudio() {
+             if (synth) return;
+            synth = new Tone.Synth({
+                oscillator: { type: "amsine", modulationType: "sine", harmonicity: 1.1 },
+                envelope: { attack: 0.1, decay: 0.2, sustain: 0.3, release: 0.5 }
+            }).toDestination();
+            musicLoop = new Tone.Loop(time => {
+                if (!isGameRunning) return;
+                const note = currentMusicNotes[musicNoteIndex % currentMusicNotes.length];
+                synth.triggerAttackRelease(note, "8n", time);
+                musicNoteIndex++;
+                musicLoop.interval = Math.max(0.1, 0.5 - (gameTime / 200));
+            }, "4n").start(0);
+        }
+        
+        // --- Classes do Jogo ---
+        class Player { 
+            constructor(x, y, radius, color) { this.x = x; this.y = y; this.radius = radius; this.color = color; this.isImmune = false; this.originalColor = color; }
+            draw() { 
+                ctx.beginPath(); 
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false); 
+                ctx.fillStyle = this.color; 
+                ctx.shadowColor = this.color; 
+                ctx.shadowBlur = (this.isImmune || isGodMode) ? 30 : 20; 
+                ctx.fill(); 
+                if (this.isImmune || isGodMode) { 
+                    ctx.strokeStyle = `rgba(255, 255, 255, ${isGodMode ? 1 : Math.abs(Math.sin(frames * 0.1))})`; 
+                    ctx.lineWidth = 3; 
+                    ctx.stroke(); 
+                } 
+                ctx.shadowBlur = 0; 
+            }
+        }
+        class Enemy {
+            constructor(x, y, radius, color, velocity) { this.x = x; this.y = y; this.radius = radius; this.color = color; this.velocity = velocity; }
+            draw(isFrozen = false) { 
+                ctx.beginPath(); 
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false); 
+                if (isFrozen) { 
+                    ctx.fillStyle = 'rgba(150, 150, 170, 0.5)'; 
+                    ctx.shadowColor = 'rgba(150, 150, 170, 0.2)'; 
+                } else { 
+                    ctx.fillStyle = this.color; 
+                    ctx.shadowColor = this.color; 
+                } 
+                ctx.shadowBlur = 15 + Math.sin(frames * 0.05) * 5; // Pulsating shadow
+                ctx.fill(); 
+                ctx.shadowBlur = 0; 
+            }
+            update(speedModifier = 1, isFrozen = false) { this.draw(isFrozen); this.x = this.x + this.velocity.x * speedModifier; this.y = this.y + this.velocity.y * speedModifier; }
+        }
+        class FastEnemy extends Enemy {
+             constructor(x, y, radius, color, velocity) { super(x, y, radius * 0.7, color, {x: velocity.x * 1.5, y: velocity.y * 1.5}); }
+        }
+        class WavyEnemy extends Enemy {
+            constructor(x, y, radius, color, velocity) { super(x, y, radius, color, velocity); this.waveAngle = 0; }
+            update(speedModifier = 1, isFrozen = false) {
+                this.waveAngle += 0.1;
+                const baseUpdateX = this.x + this.velocity.x * speedModifier;
+                const baseUpdateY = this.y + this.velocity.y * speedModifier;
+                const perpAngle = Math.atan2(this.velocity.y, this.velocity.x) + Math.PI / 2;
+                this.x = baseUpdateX + Math.cos(perpAngle) * Math.sin(this.waveAngle) * 3;
+                this.y = baseUpdateY + Math.sin(perpAngle) * Math.sin(this.waveAngle) * 3;
+                this.draw(isFrozen);
+            }
+        }
+        class Collectible { // XP Orb
+            constructor(x, y, radius, color) { this.x = x; this.y = y; this.radius = radius; this.color = color; }
+            draw(isBeingPulled = false) { 
+                ctx.beginPath(); 
+                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false); 
+                ctx.strokeStyle = isBeingPulled ? 'rgba(200, 220, 255, 0.9)' : this.color;
+                ctx.lineWidth = 3;
+                ctx.shadowColor = isBeingPulled ? 'rgba(200, 220, 255, 0.9)' : this.color; 
+                ctx.shadowBlur = 15; 
+                ctx.stroke(); 
+                ctx.shadowBlur = 0; 
+            }
+        }
+        class Coin extends Collectible {
+            draw(isBeingPulled = false) { ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false); ctx.fillStyle = isBeingPulled ? 'rgba(255, 255, 220, 0.8)' : 'gold'; ctx.shadowColor = isBeingPulled ? 'white' : 'yellow'; ctx.shadowBlur = 15; ctx.fill(); ctx.shadowBlur = 0; }
+        }
+        class PowerUp extends Collectible {
+             constructor(x, y, radius, color, type) { super(x, y, radius, color); this.type = type; }
+            draw() { ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(frames * 0.02); ctx.fillStyle = this.color; ctx.shadowColor = this.color; ctx.shadowBlur = 15; ctx.beginPath(); if (this.type === 'immunity') { for (let i = 0; i < 5; i++) { ctx.lineTo(Math.cos((18 + i * 72) / 180 * Math.PI) * this.radius, -Math.sin((18 + i * 72) / 180 * Math.PI) * this.radius); ctx.lineTo(Math.cos((54 + i * 72) / 180 * Math.PI) * this.radius / 2, -Math.sin((54 + i * 72) / 180 * Math.PI) * this.radius / 2); } } else if (this.type === 'shrink') { ctx.rect(-this.radius / 1.5, -this.radius / 1.5, this.radius * 1.5, this.radius * 1.5); } else if (this.type === 'timeStop') { ctx.rect(-this.radius / 2, -this.radius / 2, this.radius / 3, this.radius); ctx.rect(this.radius / 6, -this.radius / 2, this.radius / 3, this.radius); } else if (this.type === 'slowMotion') { ctx.moveTo(this.radius * 0.8, 0); ctx.lineWidth = 2; ctx.strokeStyle = this.color; for (let i = 0; i < 360; i++) { const angle = 0.1 * i; const r = this.radius * 0.8 * (1 - i / 360); ctx.lineTo(r * Math.cos(angle), r * Math.sin(angle)); } ctx.stroke(); } else if (this.type === 'magnet') { ctx.moveTo(-this.radius, -this.radius/2); ctx.lineTo(this.radius, -this.radius/2); ctx.lineTo(this.radius, 0); ctx.lineTo(this.radius / 2, 0); ctx.lineTo(this.radius / 2, this.radius / 2); ctx.lineTo(-this.radius / 2, this.radius / 2); ctx.lineTo(-this.radius / 2, 0); ctx.lineTo(-this.radius, 0); ctx.closePath(); } ctx.fill(); ctx.restore(); ctx.shadowBlur = 0; }
+        }
+
+        // --- Variáveis do Jogo ---
+        let player, spawnInterval, difficultyIncreaseInterval, collectibleInterval, powerUpInterval, coinInterval;
+        let enemies = [], collectibles = [], powerUps = [], coinsArr = [];
+        let spawnRate = 1000;
+        const mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
+
+        // --- Funções de Dados e UI ---
+        function loadData() {
+            totalCoins = parseInt(localStorage.getItem('orbFugazTotalCoins') || '0');
+            const savedUpgrades = JSON.parse(localStorage.getItem('orbFugazUpgrades'));
+            if (savedUpgrades) upgrades = savedUpgrades; else for (const key in UPGRADE_DATA) upgrades[key] = { level: 0 };
+            const savedHighScores = JSON.parse(localStorage.getItem('orbFugazHighScores'));
+            if(savedHighScores) highScores = savedHighScores; else for (const key in STAGES) highScores[key] = 0;
+            const savedUnlockedStages = JSON.parse(localStorage.getItem('orbFugazUnlockedStages'));
+            if(savedUnlockedStages) unlockedStages = savedUnlockedStages; else unlockedStages = ['stage1'];
+        }
+
+        function saveData() {
+            localStorage.setItem('orbFugazTotalCoins', totalCoins);
+            localStorage.setItem('orbFugazUpgrades', JSON.stringify(upgrades));
+            localStorage.setItem('orbFugazHighScores', JSON.stringify(highScores));
+            localStorage.setItem('orbFugazUnlockedStages', JSON.stringify(unlockedStages));
+        }
+        
+        function resetGameProgress() {
+            localStorage.removeItem('orbFugazTotalCoins');
+            localStorage.removeItem('orbFugazUpgrades');
+            localStorage.removeItem('orbFugazHighScores');
+            localStorage.removeItem('orbFugazUnlockedStages');
+            location.reload();
+        }
+
+        function renderUpgrades() { 
+            upgradesContainer.innerHTML = '';
+            totalCoinsEl.textContent = totalCoins;
+            for (const key in upgrades) {
+                const upgrade = upgrades[key];
+                const data = UPGRADE_DATA[key];
+                const cost = data.baseCost + (upgrade.level * data.baseCost);
+                const currentDuration = (data.baseDuration + upgrade.level * data.durationIncrease) / 1000;
+                const nextDuration = (data.baseDuration + (upgrade.level + 1) * data.durationIncrease) / 1000;
+                const card = document.createElement('div');
+                card.className = 'upgrade-card p-4 rounded-lg';
+                card.innerHTML = `<h3 class="text-xl font-bold text-white">${data.name}</h3><p class="text-gray-300">Nível: ${upgrade.level}</p><p class="text-gray-300">Duração Atual: ${currentDuration.toFixed(1)}s</p><p class="text-green-400">Próximo Nível: ${nextDuration.toFixed(1)}s</p><div class="mt-4"><button class="buy-btn w-full bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold py-2 px-4 rounded" data-skill="${key}" ${totalCoins < cost ? 'disabled' : ''}>Melhorar (Custo: ${cost})</button></div>`;
+                upgradesContainer.appendChild(card);
+            }
+            document.querySelectorAll('.buy-btn').forEach(btn => {
+                btn.addEventListener('click', () => buyUpgrade(btn.dataset.skill));
+            });
+        }
+        
+        function buyUpgrade(skill) {
+            const upgrade = upgrades[skill]; const data = UPGRADE_DATA[skill]; const cost = data.baseCost + (upgrade.level * data.baseCost);
+            if (totalCoins >= cost) { sfx.upgrade.triggerAttackRelease("E4", "0.1"); totalCoins -= cost; upgrade.level++; saveData(); renderUpgrades(); }
+        }
+
+        function renderStageSelection() {
+            stagesContainer.innerHTML = '';
+            for(const stageId in STAGES) {
+                const stage = STAGES[stageId];
+                const isUnlocked = unlockedStages.includes(stageId);
+                const stageCard = document.createElement('div');
+                stageCard.className = 'upgrade-card p-4 rounded-lg';
+                stageCard.innerHTML = `<h3 class="text-2xl font-bold ${isUnlocked ? 'text-white' : 'text-gray-500'}">${stage.name}</h3><p class="text-gray-300">Recorde: ${highScores[stageId] || 0}s</p><p class="text-gray-400 mt-2">${isUnlocked ? 'Disponível' : `Desbloqueia com ${STAGES[Object.keys(STAGES)[Object.keys(STAGES).indexOf(stageId)-1]].scoreToUnlockNext} pontos na fase anterior`}</p><button class="stage-btn w-full mt-4 bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-4 rounded" data-stage="${stageId}" ${!isUnlocked ? 'disabled' : ''}>Jogar</button>`;
+                stagesContainer.appendChild(stageCard);
+            }
+            document.querySelectorAll('.stage-btn').forEach(btn => {
+                btn.addEventListener('click', () => startGame(btn.dataset.stage));
+            });
+        }
+
+        // --- Funções do Jogo ---
+        function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+        
+        function init(stageId) {
+            currentStageId = stageId;
+            currentMusicNotes = STAGES[stageId].musicNotes;
+            highScoreEl.innerHTML = highScores[stageId] || 0;
+            player = new Player(canvas.width / 2, canvas.height / 2, originalPlayerRadius, 'hsl(200, 100%, 50%)');
+            enemies = []; collectibles = []; powerUps = []; coinsArr = []; activePowerUps = [];
+            score = 0; frames = 0; gameTime = 0; coins = 0;
+            spawnRate = 1000; musicNoteIndex = 0;
+            scoreEl.innerHTML = score; timeEl.innerHTML = gameTime; coinsEl.innerHTML = coins;
+            clearInterval(spawnInterval); clearInterval(difficultyIncreaseInterval); clearInterval(collectibleInterval); clearInterval(powerUpInterval); clearInterval(coinInterval);
+            spawnInterval = setInterval(spawnEnemy, spawnRate);
+            collectibleInterval = setInterval(spawnCollectible, 2000);
+            powerUpInterval = setInterval(spawnPowerUp, 8000);
+            coinInterval = setInterval(spawnCoin, 3000);
+            difficultyIncreaseInterval = setInterval(() => { if (spawnRate > 250) { spawnRate -= 50; clearInterval(spawnInterval); spawnInterval = setInterval(spawnEnemy, spawnRate); } }, 5000);
+        }
+        
+        function spawnEnemy() { 
+            const stage = STAGES[currentStageId];
+            const enemyType = stage.enemyTypes[Math.floor(Math.random() * stage.enemyTypes.length)];
+            const radius = Math.random() * (25 - 8) + 8;
+            let x, y;
+            if (Math.random() < 0.5) { x = Math.random() < 0.5 ? 0 - radius : canvas.width + radius; y = Math.random() * canvas.height; } 
+            else { x = Math.random() * canvas.width; y = Math.random() < 0.5 ? 0 - radius : canvas.height + radius; }
+            const angle = Math.atan2(player.y - y, player.x - x);
+            const speed = 2 + (gameTime / 20);
+            const velocity = { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed };
+            const color = `hsl(${Math.random() * 360}, 50%, 50%)`;
+            if (enemyType === 'fast') { enemies.push(new FastEnemy(x, y, radius, color, velocity)); } 
+            else if (enemyType === 'wavy') { enemies.push(new WavyEnemy(x, y, radius, color, velocity)); } 
+            else { enemies.push(new Enemy(x, y, radius, color, velocity)); }
+        }
+        function spawnCollectible() { const radius = 5; const x = Math.random() * canvas.width; const y = Math.random() * canvas.height; const color = 'hsl(100, 80%, 60%)'; collectibles.push(new Collectible(x, y, radius, color)); }
+        function spawnCoin() { const radius = 8; const x = Math.random() * canvas.width; const y = Math.random() * canvas.height; coinsArr.push(new Coin(x, y, radius, 'gold')); }
+        function spawnPowerUp() { const radius = 12; const x = Math.random() * canvas.width; const y = Math.random() * canvas.height; const rand = Math.random(); if (rand < 0.20) { powerUps.push(new PowerUp(x, y, radius, 'hsl(50, 100%, 50%)', 'immunity')); } else if (rand < 0.40) { powerUps.push(new PowerUp(x, y, radius, 'hsl(280, 100%, 60%)', 'shrink')); } else if (rand < 0.60) { powerUps.push(new PowerUp(x, y, radius, 'hsl(180, 100%, 50%)', 'timeStop')); } else if (rand < 0.80) { powerUps.push(new PowerUp(x, y, radius, 'hsl(30, 100%, 50%)', 'slowMotion')); } else { powerUps.push(new PowerUp(x, y, radius, 'hsl(220, 80%, 60%)', 'magnet')); } }
+        function activatePowerUp(type) { sfx.powerup.triggerAttackRelease("C5", "0.2"); const data = UPGRADE_DATA[type]; const upgrade = upgrades[type]; const duration = data.baseDuration + (upgrade.level * data.durationIncrease); activePowerUps.push({ type: type, name: data.name, expiryTime: Date.now() + duration }); }
+        
+        function animate() {
+            animationId = requestAnimationFrame(animate);
+            frames++;
+            if (frames % 60 === 0) gameTime++;
+            timeEl.innerHTML = gameTime;
+
+            activePowerUps = activePowerUps.filter(p => Date.now() < p.expiryTime);
+            let isTimeStopped = activePowerUps.some(p => p.type === 'timeStop');
+            let isSlowed = activePowerUps.some(p => p.type === 'slowMotion');
+            let isMagnetActive = activePowerUps.some(p => p.type === 'magnet');
+            player.isImmune = activePowerUps.some(p => p.type === 'immunity');
+            player.radius = activePowerUps.some(p => p.type === 'shrink') ? originalPlayerRadius / 2 : originalPlayerRadius;
+            player.color = player.isImmune || isGodMode ? 'hsl(0, 0%, 100%)' : player.originalColor;
+            let speedModifier = isSlowed ? 0.4 : 1;
+            if (isTimeStopped) speedModifier = 0;
+
+            ctx.fillStyle = 'rgba(17, 17, 17, 0.1)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            player.x += (mouse.x - player.x) * 0.1; player.y += (mouse.y - player.y) * 0.1;
+            player.draw();
+
+            powerUpStatusEl.innerHTML = activePowerUps.map(p => { const timeLeft = ((p.expiryTime - Date.now()) / 1000).toFixed(1); return `<div><span class="font-bold">${p.name}</span>: ${timeLeft}s</div>`; }).join('');
+
+            powerUps.forEach((powerup, index) => { powerup.draw(); if (Math.hypot(player.x - powerup.x, player.y - powerup.y) - powerup.radius - player.radius < 1) { activatePowerUp(powerup.type); powerUps.splice(index, 1); } });
+            
+            [...collectibles, ...coinsArr].forEach((item) => {
+                if(isMagnetActive) { const angle = Math.atan2(player.y - item.y, player.x - item.x); item.x += Math.cos(angle) * 5; item.y += Math.sin(angle) * 5; }
+                item.draw(isMagnetActive);
+                if (Math.hypot(player.x - item.x, player.y - item.y) - item.radius - player.radius < 1) {
+                     if (item instanceof Coin) { sfx.coin.triggerAttackRelease("G5", "0.05"); coins++; coinsEl.innerHTML = coins; coinsArr.splice(coinsArr.indexOf(item), 1); } 
+                     else { sfx.collect.triggerAttackRelease("C6", "0.1"); score += 100 * xpMultiplier; scoreEl.innerHTML = score; collectibles.splice(collectibles.indexOf(item), 1); }
+                }
+            });
+            
+            enemies.forEach((enemy) => { enemy.update(speedModifier, isTimeStopped); if (Math.hypot(player.x - enemy.x, player.y - enemy.y) - enemy.radius - player.radius < 1 && !player.isImmune && !isGodMode) { endGame(); } });
+        }
+        
+        function endGame() {
+            document.body.style.cursor = 'default';
+            isGameRunning = false;
+            Tone.Transport.stop();
+            sfx.gameOver.triggerAttackRelease("C2", "0.5");
+            cancelAnimationFrame(animationId);
+            clearInterval(spawnInterval); clearInterval(difficultyIncreaseInterval); clearInterval(collectibleInterval); clearInterval(powerUpInterval); clearInterval(coinInterval);
+            totalCoins += coins;
+            if (gameTime > (highScores[currentStageId] || 0)) {
+                highScores[currentStageId] = gameTime;
+            }
+            const currentStageData = STAGES[currentStageId];
+            if (score >= currentStageData.scoreToUnlockNext && currentStageData.nextStage && !unlockedStages.includes(currentStageData.nextStage)) {
+                unlockedStages.push(currentStageData.nextStage);
+            }
+            saveData();
+
+            gameUi.style.display = 'none';
+            modalTitle.textContent = 'Fim de Jogo';
+            endGameStats.style.display = 'block';
+            modalTimeEl.innerHTML = `${gameTime}<span class="text-4xl">s</span>`;
+            modalScoreEl.innerHTML = score;
+            modalCoinsEl.innerHTML = coins;
+            modalEl.style.display = 'flex';
+        }
+
+        async function startGame(stageId) {
+            if (Tone.context.state !== 'running') { await Tone.start(); setupAudio(); }
+            document.body.style.cursor = 'none';
+            isGameRunning = true;
+            Tone.Transport.start();
+            init(stageId);
+            animate();
+            stageSelectionModalEl.style.display = 'none';
+            gameUi.style.display = 'flex';
+        }
+
+        // --- Event Listeners ---
+        playBtn.addEventListener('click', () => { modalEl.style.display = 'none'; renderStageSelection(); stageSelectionModalEl.style.display = 'flex'; });
+        closeStageBtn.addEventListener('click', () => { stageSelectionModalEl.style.display = 'none'; modalEl.style.display = 'flex'; });
+        upgradeBtn.addEventListener('click', () => { modalEl.style.display = 'none'; renderUpgrades(); upgradeModalEl.style.display = 'flex'; });
+        closeUpgradeBtn.addEventListener('click', () => { upgradeModalEl.style.display = 'none'; modalEl.style.display = 'flex'; });
+        
+        // Mod Menu Listeners
+        window.addEventListener('keydown', (e) => {
+            if (e.key.toLowerCase() === 'f') {
+                modMenuEl.style.display = modMenuEl.style.display === 'none' ? 'flex' : 'none';
+            }
+        });
+        closeModMenuBtn.addEventListener('click', () => { modMenuEl.style.display = 'none'; });
+        godModeCheckbox.addEventListener('change', (e) => { isGodMode = e.target.checked; });
+        xpMultiplierCheckbox.addEventListener('change', (e) => { xpMultiplier = e.target.checked ? 50 : 1; });
+        addCoinsBtn.addEventListener('click', () => {
+            totalCoins += 100;
+            saveData();
+            if (upgradeModalEl.style.display === 'flex') { renderUpgrades(); }
+        });
+        removeCoinsBtn.addEventListener('click', () => {
+            totalCoins = Math.max(0, totalCoins - 100);
+            saveData();
+            if (upgradeModalEl.style.display === 'flex') { renderUpgrades(); }
+        });
+        resetGameBtn.addEventListener('click', () => {
+            confirmResetModalEl.style.display = 'flex';
+        });
+
+        // Reset Confirmation Listeners
+        confirmResetBtn.addEventListener('click', resetGameProgress);
+        cancelResetBtn.addEventListener('click', () => {
+            confirmResetModalEl.style.display = 'none';
+        });
+
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('mousemove', (event) => { mouse.x = event.clientX; mouse.y = event.clientY; });
+
+        // --- Inicialização ---
+        loadData();
+        resizeCanvas();
+        modalTitle.textContent = "Orbe Fugaz";
+        endGameStats.style.display = 'none';
+        modalEl.style.display = 'flex';
+    </script>
+</body>
+</html>
+
