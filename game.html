@@ -16,7 +16,7 @@
             overflow: hidden; /* Evita barras de rolagem */
         }
         canvas {
-            background: radial-gradient(circle, #1a202c, #111);
+            background-color: #111827;
             display: block;
             position: absolute;
             top: 0;
@@ -125,7 +125,7 @@
     
     <!-- Modal de Seleção de Fase -->
     <div id="stageSelectionModalEl" class="fixed inset-0 flex-col items-center justify-center ui-element p-4" style="display: none;">
-        <div class="modal-bg rounded-2xl p-8 text-center w-full max-w-2xl">
+        <div class="modal-bg rounded-2xl p-8 text-center w-full max-w-3xl">
             <h1 class="text-4xl font-bold neon-text mb-6">Selecionar Fase</h1>
             <div id="stagesContainer" class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <!-- Cards de Fase injetados aqui -->
@@ -248,7 +248,13 @@
         let highScores = {};
         let unlockedStages = ['stage1'];
         let currentStageId = 'stage1';
+        
+        // --- Background Variables ---
         let backgroundHue = 240;
+        let backgroundStars = [];
+        let backgroundParticles = [];
+        let backgroundHoleParticles = [];
+
 
         const STAGES = {
             stage1: {
@@ -266,20 +272,27 @@
                 enemyTypes: ['normal', 'fast', 'wavy']
             },
             stage3: {
+                name: 'Nebulosa Cromática',
+                scoreToUnlockNext: 7500,
+                nextStage: 'stage4',
+                musicNotes: ["C4", "D#4", "G4", "A#4", "G4", "D#4", "C4", "A#3"],
+                enemyTypes: ['fast', 'wavy', 'giant', 'teleporter']
+            },
+            stage4: {
                 name: 'Buraco Negro Pulsante',
                 scoreToUnlockNext: 99999,
                 nextStage: null,
-                musicNotes: ["C4", "D#4", "G4", "A#4", "G4", "D#4", "C4", "A#3"],
-                enemyTypes: ['fast', 'wavy', 'giant', 'teleporter']
+                musicNotes: ["A2", "C3", "D3", "E3", "G3", "E3", "D3", "C3"],
+                enemyTypes: ['giant', 'teleporter', 'squadron']
             }
         };
 
         const UPGRADE_DATA = {
-            immunity: { name: 'Imunidade', baseDuration: 5000, durationIncrease: 500, baseCost: 10 },
-            shrink: { name: 'Encolher', baseDuration: 7000, durationIncrease: 700, baseCost: 10 },
-            timeStop: { name: 'Tempo Parado', baseDuration: 5000, durationIncrease: 500, baseCost: 15 },
-            slowMotion: { name: 'Câmera Lenta', baseDuration: 7000, durationIncrease: 700, baseCost: 15 },
-            magnet: { name: 'Ímã de Coleta', baseDuration: 10000, durationIncrease: 1000, baseCost: 20 },
+            immunity: { name: 'Imunidade', description: 'Fique invencível por um curto período.', baseDuration: 5000, durationIncrease: 500, baseCost: 10 },
+            shrink: { name: 'Encolher', description: 'Diminui seu tamanho, tornando mais fácil desviar.', baseDuration: 7000, durationIncrease: 700, baseCost: 10 },
+            timeStop: { name: 'Tempo Parado', description: 'Congela todos os inimigos na tela.', baseDuration: 5000, durationIncrease: 500, baseCost: 15 },
+            slowMotion: { name: 'Câmera Lenta', description: 'Deixa todos os inimigos mais lentos.', baseDuration: 7000, durationIncrease: 700, baseCost: 15 },
+            magnet: { name: 'Ímã de Coleta', description: 'Puxa todas as moedas e XP até você.', baseDuration: 10000, durationIncrease: 1000, baseCost: 20 },
         };
 
         // --- Configuração de Áudio (Tone.js) ---
@@ -397,6 +410,34 @@
                 this.draw();
             }
         }
+        class TriangleEnemy extends Enemy {
+            constructor(x, y, radius, color, velocity) {
+                super(x, y, radius, color, velocity);
+                this.size = this.radius * 1.5;
+            }
+            draw(isFrozen = false) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(Math.atan2(this.velocity.y, this.velocity.x) + Math.PI / 2);
+
+                ctx.beginPath();
+                ctx.moveTo(0, -this.size);
+                ctx.lineTo(-this.size / 1.5, this.size / 1.5);
+                ctx.lineTo(this.size / 1.5, this.size / 1.5);
+                ctx.closePath();
+
+                if (isFrozen) {
+                    ctx.fillStyle = 'rgba(150, 150, 170, 0.5)';
+                    ctx.shadowColor = 'rgba(150, 150, 170, 0.2)';
+                } else {
+                    ctx.fillStyle = this.color;
+                    ctx.shadowColor = this.color;
+                }
+                ctx.shadowBlur = 15;
+                ctx.fill();
+                ctx.restore();
+            }
+        }
         class Collectible { // XP Orb
             constructor(x, y, radius, color) { this.x = x; this.y = y; this.radius = radius; this.color = color; }
             draw(isBeingPulled = false) { 
@@ -411,7 +452,32 @@
             }
         }
         class Coin extends Collectible {
-            draw(isBeingPulled = false) { ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false); ctx.fillStyle = isBeingPulled ? 'rgba(255, 255, 220, 0.8)' : 'gold'; ctx.shadowColor = isBeingPulled ? 'white' : 'yellow'; ctx.shadowBlur = 15; ctx.fill(); ctx.shadowBlur = 0; }
+            draw(isBeingPulled = false) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+
+                const color1 = isBeingPulled ? '#FFFFA0' : '#FFD700';
+                const color2 = isBeingPulled ? '#FFFFE0' : '#FFA500';
+                const gradient = ctx.createRadialGradient(0, 0, this.radius * 0.5, 0, 0, this.radius);
+                gradient.addColorStop(0, color1);
+                gradient.addColorStop(1, color2);
+
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2, false);
+                ctx.fillStyle = gradient;
+                ctx.shadowColor = isBeingPulled ? 'white' : 'yellow';
+                ctx.shadowBlur = 15;
+                ctx.fill();
+                ctx.shadowBlur = 0;
+
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.font = `${this.radius * 1.2}px Inter`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText('★', 0, 1);
+
+                ctx.restore();
+            }
         }
         class PowerUp extends Collectible {
              constructor(x, y, radius, color, type) { super(x, y, radius, color); this.type = type; }
@@ -469,7 +535,11 @@
         function loadData() {
             totalCoins = parseInt(localStorage.getItem('orbFugazTotalCoins') || '0');
             const savedUpgrades = JSON.parse(localStorage.getItem('orbFugazUpgrades'));
-            if (savedUpgrades) upgrades = savedUpgrades; else for (const key in UPGRADE_DATA) upgrades[key] = { level: 0 };
+            if (savedUpgrades) {
+                upgrades = savedUpgrades;
+            } else {
+                for (const key in UPGRADE_DATA) upgrades[key] = { level: 0 };
+            }
             const savedHighScores = JSON.parse(localStorage.getItem('orbFugazHighScores'));
             if(savedHighScores) highScores = savedHighScores; else for (const key in STAGES) highScores[key] = 0;
             const savedUnlockedStages = JSON.parse(localStorage.getItem('orbFugazUnlockedStages'));
@@ -491,18 +561,46 @@
             location.reload();
         }
 
-        function renderUpgrades() { 
+        function renderUpgrades() {
             upgradesContainer.innerHTML = '';
             totalCoinsEl.textContent = totalCoins;
-            for (const key in upgrades) {
+            for (const key in UPGRADE_DATA) {
                 const upgrade = upgrades[key];
                 const data = UPGRADE_DATA[key];
-                const cost = data.baseCost + (upgrade.level * data.baseCost);
-                const currentDuration = (data.baseDuration + upgrade.level * data.durationIncrease) / 1000;
-                const nextDuration = (data.baseDuration + (upgrade.level + 1) * data.durationIncrease) / 1000;
                 const card = document.createElement('div');
-                card.className = 'upgrade-card p-4 rounded-lg';
-                card.innerHTML = `<h3 class="text-xl font-bold text-white">${data.name}</h3><p class="text-gray-300">Nível: ${upgrade.level}</p><p class="text-gray-300">Duração Atual: ${currentDuration.toFixed(1)}s</p><p class="text-green-400">Próximo Nível: ${nextDuration.toFixed(1)}s</p><div class="mt-4"><button class="buy-btn w-full bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold py-2 px-4 rounded" data-skill="${key}" ${totalCoins < cost ? 'disabled' : ''}>Melhorar (Custo: ${cost})</button></div>`;
+                card.className = 'upgrade-card p-4 rounded-lg flex flex-col justify-between';
+
+                let content;
+                if (upgrade.level === 0) { // Bloqueado
+                    const cost = data.baseCost;
+                    content = `
+                        <div>
+                            <h3 class="text-xl font-bold text-gray-400">${data.name} (Bloqueado)</h3>
+                            <p class="text-gray-300 mt-2">${data.description}</p>
+                        </div>
+                        <div class="mt-4">
+                            <button class="buy-btn w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded" data-skill="${key}" ${totalCoins < cost ? 'disabled' : ''}>
+                                Desbloquear (Custo: ${cost})
+                            </button>
+                        </div>`;
+                } else { // Desbloqueado
+                    const cost = data.baseCost + (upgrade.level * data.baseCost);
+                    const currentDuration = (data.baseDuration + (upgrade.level - 1) * data.durationIncrease) / 1000;
+                    const nextDuration = (data.baseDuration + upgrade.level * data.durationIncrease) / 1000;
+                    content = `
+                        <div>
+                            <h3 class="text-xl font-bold text-white">${data.name}</h3>
+                            <p class="text-gray-300">Nível: ${upgrade.level}</p>
+                            <p class="text-gray-300">Duração Atual: ${currentDuration.toFixed(1)}s</p>
+                            <p class="text-green-400">Próximo Nível: ${nextDuration.toFixed(1)}s</p>
+                        </div>
+                        <div class="mt-4">
+                            <button class="buy-btn w-full bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold py-2 px-4 rounded" data-skill="${key}" ${totalCoins < cost ? 'disabled' : ''}>
+                                Melhorar (Custo: ${cost})
+                            </button>
+                        </div>`;
+                }
+                card.innerHTML = content;
                 upgradesContainer.appendChild(card);
             }
             document.querySelectorAll('.buy-btn').forEach(btn => {
@@ -542,6 +640,27 @@
             score = 0; frames = 0; gameTime = 0; coins = 0;
             spawnRate = 1000; musicNoteIndex = 0;
             scoreEl.innerHTML = score; timeEl.innerHTML = gameTime; coinsEl.innerHTML = coins;
+            
+            // Background setup
+            backgroundStars = [];
+            backgroundParticles = [];
+            backgroundHoleParticles = [];
+            if (stageId === 'stage1') {
+                for (let i = 0; i < 100; i++) {
+                    backgroundStars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, radius: Math.random() * 1.5, alpha: Math.random() * 0.5 + 0.5 });
+                }
+            } else if (stageId === 'stage2') {
+                for (let i = 0; i < 50; i++) {
+                    backgroundParticles.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, speed: Math.random() * 2 + 1, radius: Math.random() * 2 + 1, color: `hsl(40, 100%, ${Math.random() * 30 + 50}%)` });
+                }
+            } else if (stageId === 'stage4') {
+                for (let i = 0; i < 150; i++) {
+                    const radius = Math.random() * canvas.width / 2;
+                    const angle = Math.random() * Math.PI * 2;
+                    backgroundHoleParticles.push({ x: canvas.width / 2 + Math.cos(angle) * radius, y: canvas.height / 2 + Math.sin(angle) * radius, radius: Math.random() * 1.5, angle: angle, distance: radius, speed: Math.random() * 0.005 + 0.001 });
+                }
+            }
+
             clearInterval(spawnInterval); clearInterval(difficultyIncreaseInterval); clearInterval(collectibleInterval); clearInterval(powerUpInterval); clearInterval(coinInterval); clearInterval(obstacleInterval);
             spawnInterval = setInterval(spawnEnemy, spawnRate);
             collectibleInterval = setInterval(spawnCollectible, 2000);
@@ -558,10 +677,24 @@
             let x, y;
             if (Math.random() < 0.5) { x = Math.random() < 0.5 ? 0 - radius : canvas.width + radius; y = Math.random() * canvas.height; } 
             else { x = Math.random() * canvas.width; y = Math.random() < 0.5 ? 0 - radius : canvas.height + radius; }
-            const angle = Math.atan2(player.y - y, player.x - x);
+            
             const speed = 2 + (gameTime / 20);
-            const velocity = { x: Math.cos(angle) * speed, y: Math.sin(angle) * speed };
             const color = `hsl(${Math.random() * 360}, 50%, 50%)`;
+
+            if (enemyType === 'squadron') {
+                const squadronSize = Math.floor(Math.random() * 3) + 3;
+                const baseAngle = Math.atan2(player.y - y, player.x - x);
+                for(let i = 0; i < squadronSize; i++) {
+                    const angleOffset = (Math.random() - 0.5) * 0.5;
+                    const velocity = { x: Math.cos(baseAngle + angleOffset) * speed, y: Math.sin(baseAngle + angleOffset) * speed };
+                    const spawnX = x + (Math.random() - 0.5) * 50;
+                    const spawnY = y + (Math.random() - 0.5) * 50;
+                    enemies.push(new TriangleEnemy(spawnX, spawnY, radius * 0.8, 'hsl(120, 80%, 60%)', velocity));
+                }
+                return;
+            }
+
+            const velocity = { x: Math.cos(Math.atan2(player.y - y, player.x - x)) * speed, y: Math.sin(Math.atan2(player.y - y, player.x - x)) * speed };
             if (enemyType === 'fast') { enemies.push(new FastEnemy(x, y, radius, color, velocity)); } 
             else if (enemyType === 'wavy') { enemies.push(new WavyEnemy(x, y, radius, color, velocity)); } 
             else if (enemyType === 'giant') { enemies.push(new GiantEnemy(x, y, radius, color, velocity)); } 
@@ -570,9 +703,36 @@
         }
         function spawnCollectible() { const radius = 5; const x = Math.random() * canvas.width; const y = Math.random() * canvas.height; const color = 'hsl(100, 80%, 60%)'; collectibles.push(new Collectible(x, y, radius, color)); }
         function spawnCoin() { const radius = 8; const x = Math.random() * canvas.width; const y = Math.random() * canvas.height; coinsArr.push(new Coin(x, y, radius, 'gold')); }
-        function spawnPowerUp() { const radius = 12; const x = Math.random() * canvas.width; const y = Math.random() * canvas.height; const rand = Math.random(); if (rand < 0.20) { powerUps.push(new PowerUp(x, y, radius, 'hsl(50, 100%, 50%)', 'immunity')); } else if (rand < 0.40) { powerUps.push(new PowerUp(x, y, radius, 'hsl(280, 100%, 60%)', 'shrink')); } else if (rand < 0.60) { powerUps.push(new PowerUp(x, y, radius, 'hsl(180, 100%, 50%)', 'timeStop')); } else if (rand < 0.80) { powerUps.push(new PowerUp(x, y, radius, 'hsl(30, 100%, 50%)', 'slowMotion')); } else { powerUps.push(new PowerUp(x, y, radius, 'hsl(220, 80%, 60%)', 'magnet')); } }
+        
+        function spawnPowerUp() {
+            const unlockedPowerUps = Object.keys(upgrades).filter(key => upgrades[key].level > 0);
+            if (unlockedPowerUps.length === 0) return;
+
+            const radius = 12;
+            const x = Math.random() * canvas.width;
+            const y = Math.random() * canvas.height;
+            const type = unlockedPowerUps[Math.floor(Math.random() * unlockedPowerUps.length)];
+            
+            let color;
+            switch (type) {
+                case 'immunity': color = 'hsl(50, 100%, 50%)'; break;
+                case 'shrink': color = 'hsl(280, 100%, 60%)'; break;
+                case 'timeStop': color = 'hsl(180, 100%, 50%)'; break;
+                case 'slowMotion': color = 'hsl(30, 100%, 50%)'; break;
+                case 'magnet': color = 'hsl(220, 80%, 60%)'; break;
+            }
+            powerUps.push(new PowerUp(x, y, radius, color, type));
+        }
+
         function spawnObstacle() { const width = Math.random() * 200 + 100; const height = Math.random() * 200 + 100; const x = Math.random() * (canvas.width - width); const y = Math.random() * (canvas.height - height); const lifetime = 300; obstacles.push(new Obstacle(x, y, width, height, lifetime)); }
-        function activatePowerUp(type) { sfx.powerup.triggerAttackRelease("C5", "0.2"); const data = UPGRADE_DATA[type]; const upgrade = upgrades[type]; const duration = data.baseDuration + (upgrade.level * data.durationIncrease); activePowerUps.push({ type: type, name: data.name, expiryTime: Date.now() + duration }); }
+        
+        function activatePowerUp(type) {
+            sfx.powerup.triggerAttackRelease("C5", "0.2");
+            const data = UPGRADE_DATA[type];
+            const upgrade = upgrades[type];
+            const duration = data.baseDuration + ((upgrade.level - 1) * data.durationIncrease);
+            activePowerUps.push({ type: type, name: data.name, expiryTime: Date.now() + duration });
+        }
         
         function animate() {
             animationId = requestAnimationFrame(animate);
@@ -590,6 +750,7 @@
             let speedModifier = isSlowed ? 0.4 : 1;
             if (isTimeStopped) speedModifier = 0;
 
+            // Draw Background
             if (currentStageId === 'stage3') {
                 backgroundHue = (backgroundHue + 0.1) % 360;
                 const color1 = `hsl(${backgroundHue}, 100%, 10%)`;
@@ -599,8 +760,46 @@
                 gradient.addColorStop(1, color2);
                 ctx.fillStyle = gradient;
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
+            } else if (currentStageId === 'stage4') {
+                ctx.fillStyle = '#000000';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                backgroundHoleParticles.forEach(p => {
+                    p.distance -= p.distance * 0.001;
+                    p.angle += p.speed;
+                    p.x = centerX + Math.cos(p.angle) * p.distance;
+                    p.y = centerY + Math.sin(p.angle) * p.distance;
+                    if (p.distance < 50) {
+                        p.distance = Math.random() * canvas.width / 2;
+                        p.angle = Math.random() * Math.PI * 2;
+                    }
+                    const opacity = Math.max(0, 1 - (p.distance / (canvas.width / 2)));
+                    ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fillStyle = `rgba(255, 255, 255, ${opacity * 0.7})`; ctx.fill();
+                });
+                const holeRadius = 50 + Math.sin(frames * 0.02) * 10;
+                const grad = ctx.createRadialGradient(centerX, centerY, holeRadius * 0.8, centerX, centerY, holeRadius * 2);
+                grad.addColorStop(0, 'black'); grad.addColorStop(0.5, 'rgba(20, 0, 40, 0.5)'); grad.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.beginPath(); ctx.arc(centerX, centerY, holeRadius, 0, Math.PI * 2); ctx.fillStyle = 'black'; ctx.fill();
             } else {
-                ctx.fillStyle = 'rgba(17, 17, 17, 0.1)';
+                ctx.fillStyle = '#111827';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                if (currentStageId === 'stage1') {
+                    backgroundStars.forEach(star => {
+                        ctx.beginPath(); ctx.arc(star.x, star.y, star.radius, 0, Math.PI * 2);
+                        ctx.fillStyle = `rgba(255, 255, 255, ${star.alpha})`; ctx.fill();
+                    });
+                } else if (currentStageId === 'stage2') {
+                    backgroundParticles.forEach(p => {
+                        p.x += p.speed;
+                        if (p.x > canvas.width) { p.x = 0; p.y = Math.random() * canvas.height; }
+                        ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+                        ctx.fillStyle = p.color; ctx.fill();
+                    });
+                }
+                ctx.fillStyle = 'rgba(17, 24, 39, 0.2)';
                 ctx.fillRect(0, 0, canvas.width, canvas.height);
             }
             
@@ -633,7 +832,15 @@
                 }
             });
             
-            enemies.forEach((enemy) => { enemy.update(speedModifier, isTimeStopped); if (Math.hypot(player.x - enemy.x, player.y - enemy.y) - enemy.radius - player.radius < 1 && !player.isImmune && !isGodMode) { endGame(); } });
+            enemies.forEach((enemy, index) => { 
+                enemy.update(speedModifier, isTimeStopped); 
+                const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
+                // For TriangleEnemy, the radius is smaller than the visual size, so use a larger hitbox
+                const hitboxRadius = enemy instanceof TriangleEnemy ? enemy.size : enemy.radius;
+                if (dist - hitboxRadius - player.radius < 1 && !player.isImmune && !isGodMode) { 
+                    endGame(); 
+                } 
+            });
         }
         
         function endGame() {
