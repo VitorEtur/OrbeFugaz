@@ -180,7 +180,7 @@
         </div>
     </div>
 
-    <!-- Modal de Confirmação de Reset (NOVO) -->
+    <!-- Modal de Confirmação de Reset -->
     <div id="confirmResetModalEl" class="fixed inset-0 flex-col items-center justify-center ui-element p-4" style="display: none;">
         <div class="modal-bg rounded-2xl p-8 text-center w-full max-w-md">
             <h1 class="text-2xl font-bold text-yellow-400 mb-4">Atenção</h1>
@@ -248,6 +248,7 @@
         let highScores = {};
         let unlockedStages = ['stage1'];
         let currentStageId = 'stage1';
+        let backgroundHue = 240;
 
         const STAGES = {
             stage1: {
@@ -259,10 +260,17 @@
             },
             stage2: {
                 name: 'Tempestade Solar',
-                scoreToUnlockNext: 10000, // para uma futura fase 3
+                scoreToUnlockNext: 5000,
                 nextStage: 'stage3',
                 musicNotes: ["F#3", "G#3", "A#3", "C#4", "D#4", "C#4", "A#3", "G#3"],
                 enemyTypes: ['normal', 'fast', 'wavy']
+            },
+            stage3: {
+                name: 'Buraco Negro Pulsante',
+                scoreToUnlockNext: 99999,
+                nextStage: null,
+                musicNotes: ["C4", "D#4", "G4", "A#4", "G4", "D#4", "C4", "A#3"],
+                enemyTypes: ['fast', 'wavy', 'giant', 'teleporter']
             }
         };
 
@@ -277,8 +285,8 @@
         // --- Configuração de Áudio (Tone.js) ---
         let synth, musicLoop;
         const sfx = {
-            collect: new Tone.Synth({ oscillator: { type: "sine" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.2 } }).toDestination(),
-            coin: new Tone.Synth({ oscillator: { type: "square" }, envelope: { attack: 0.01, decay: 0.05, sustain: 0.1, release: 0.1 } }).toDestination(),
+            collect: new Tone.PolySynth(Tone.Synth, { oscillator: { type: "sine" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.2 } }).toDestination(),
+            coin: new Tone.PolySynth(Tone.Synth, { oscillator: { type: "square" }, envelope: { attack: 0.01, decay: 0.05, sustain: 0.1, release: 0.1 } }).toDestination(),
             powerup: new Tone.Synth({ oscillator: { type: "triangle8" }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.3 } }).toDestination(),
             gameOver: new Tone.Synth({ oscillator: { type: "fmsquare" }, envelope: { attack: 0.01, decay: 0.5, sustain: 0.1, release: 0.8 } }).toDestination(),
             upgrade: new Tone.Synth({ oscillator: { type: "sawtooth" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.2 } }).toDestination(),
@@ -352,6 +360,43 @@
                 this.draw(isFrozen);
             }
         }
+        class GiantEnemy extends Enemy {
+             constructor(x, y, radius, color, velocity) {
+                 super(x, y, radius * 2.5, 'hsl(0, 70%, 50%)', {x: velocity.x * 0.5, y: velocity.y * 0.5});
+             }
+        }
+        class TeleporterEnemy extends Enemy {
+            constructor(x, y, radius, color, velocity) {
+                super(x, y, radius * 0.8, 'hsl(270, 80%, 70%)', velocity);
+                this.teleportCooldown = 180; // 3 seconds at 60fps
+                this.isVanishing = false;
+                this.vanishCounter = 0;
+            }
+            update(speedModifier = 1, isFrozen = false) {
+                if (isFrozen) { this.draw(true); return; }
+                this.teleportCooldown--;
+                if (this.teleportCooldown <= 0) { this.isVanishing = true; }
+                if (this.isVanishing) {
+                    this.vanishCounter++;
+                    this.radius *= 0.9;
+                    if (this.vanishCounter >= 30) {
+                        const angleToPlayer = Math.atan2(player.y - this.y, player.x - this.x);
+                        const dist = Math.hypot(player.x - this.x, player.y - this.y);
+                        const newDist = Math.max(100, dist * 0.5);
+                        this.x = player.x - Math.cos(angleToPlayer) * newDist;
+                        this.y = player.y - Math.sin(angleToPlayer) * newDist;
+                        this.radius = Math.random() * (25 - 8) + 8 * 0.8;
+                        this.isVanishing = false;
+                        this.vanishCounter = 0;
+                        this.teleportCooldown = 180;
+                    }
+                } else {
+                    this.x += this.velocity.x * speedModifier;
+                    this.y += this.velocity.y * speedModifier;
+                }
+                this.draw();
+            }
+        }
         class Collectible { // XP Orb
             constructor(x, y, radius, color) { this.x = x; this.y = y; this.radius = radius; this.color = color; }
             draw(isBeingPulled = false) { 
@@ -372,10 +417,51 @@
              constructor(x, y, radius, color, type) { super(x, y, radius, color); this.type = type; }
             draw() { ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(frames * 0.02); ctx.fillStyle = this.color; ctx.shadowColor = this.color; ctx.shadowBlur = 15; ctx.beginPath(); if (this.type === 'immunity') { for (let i = 0; i < 5; i++) { ctx.lineTo(Math.cos((18 + i * 72) / 180 * Math.PI) * this.radius, -Math.sin((18 + i * 72) / 180 * Math.PI) * this.radius); ctx.lineTo(Math.cos((54 + i * 72) / 180 * Math.PI) * this.radius / 2, -Math.sin((54 + i * 72) / 180 * Math.PI) * this.radius / 2); } } else if (this.type === 'shrink') { ctx.rect(-this.radius / 1.5, -this.radius / 1.5, this.radius * 1.5, this.radius * 1.5); } else if (this.type === 'timeStop') { ctx.rect(-this.radius / 2, -this.radius / 2, this.radius / 3, this.radius); ctx.rect(this.radius / 6, -this.radius / 2, this.radius / 3, this.radius); } else if (this.type === 'slowMotion') { ctx.moveTo(this.radius * 0.8, 0); ctx.lineWidth = 2; ctx.strokeStyle = this.color; for (let i = 0; i < 360; i++) { const angle = 0.1 * i; const r = this.radius * 0.8 * (1 - i / 360); ctx.lineTo(r * Math.cos(angle), r * Math.sin(angle)); } ctx.stroke(); } else if (this.type === 'magnet') { ctx.moveTo(-this.radius, -this.radius/2); ctx.lineTo(this.radius, -this.radius/2); ctx.lineTo(this.radius, 0); ctx.lineTo(this.radius / 2, 0); ctx.lineTo(this.radius / 2, this.radius / 2); ctx.lineTo(-this.radius / 2, this.radius / 2); ctx.lineTo(-this.radius / 2, 0); ctx.lineTo(-this.radius, 0); ctx.closePath(); } ctx.fill(); ctx.restore(); ctx.shadowBlur = 0; }
         }
+        class Obstacle {
+            constructor(x, y, width, height, lifetime) {
+                this.x = x;
+                this.y = y;
+                this.width = width;
+                this.height = height;
+                this.lifetime = lifetime;
+                this.initialLifetime = lifetime;
+                this.warmupTime = 90; // 1.5 seconds at 60fps
+                this.currentWarmup = this.warmupTime;
+                this.isActive = false;
+            }
+            draw() {
+                if (!this.isActive) {
+                    // Warmup animation
+                    const warmupProgress = (this.warmupTime - this.currentWarmup) / this.warmupTime;
+                    ctx.strokeStyle = `rgba(255, 150, 100, ${0.5 * warmupProgress})`;
+                    ctx.lineWidth = 5;
+                    ctx.setLineDash([15, 15]); // Dashed line for warning
+                    ctx.strokeRect(this.x, this.y, this.width, this.height);
+                    ctx.setLineDash([]); // Reset line dash
+                } else {
+                    // Active and dangerous state
+                    const opacity = Math.min(1, this.lifetime / 60, (this.initialLifetime - this.lifetime) / 60);
+                    ctx.fillStyle = `rgba(255, 100, 100, ${0.3 + Math.sin(frames * 0.1) * 0.1 * opacity})`;
+                    ctx.strokeStyle = `rgba(255, 100, 100, ${0.8 * opacity})`;
+                    ctx.lineWidth = 3;
+                    ctx.fillRect(this.x, this.y, this.width, this.height);
+                    ctx.strokeRect(this.x, this.y, this.width, this.height);
+                }
+            }
+            update() {
+                if (this.currentWarmup > 0) {
+                    this.currentWarmup--;
+                } else {
+                    this.isActive = true;
+                    this.lifetime--;
+                }
+                this.draw();
+            }
+        }
 
         // --- Variáveis do Jogo ---
-        let player, spawnInterval, difficultyIncreaseInterval, collectibleInterval, powerUpInterval, coinInterval;
-        let enemies = [], collectibles = [], powerUps = [], coinsArr = [];
+        let player, spawnInterval, difficultyIncreaseInterval, collectibleInterval, powerUpInterval, coinInterval, obstacleInterval;
+        let enemies = [], collectibles = [], powerUps = [], coinsArr = [], obstacles = [];
         let spawnRate = 1000;
         const mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
 
@@ -452,15 +538,16 @@
             currentMusicNotes = STAGES[stageId].musicNotes;
             highScoreEl.innerHTML = highScores[stageId] || 0;
             player = new Player(canvas.width / 2, canvas.height / 2, originalPlayerRadius, 'hsl(200, 100%, 50%)');
-            enemies = []; collectibles = []; powerUps = []; coinsArr = []; activePowerUps = [];
+            enemies = []; collectibles = []; powerUps = []; coinsArr = []; obstacles = []; activePowerUps = [];
             score = 0; frames = 0; gameTime = 0; coins = 0;
             spawnRate = 1000; musicNoteIndex = 0;
             scoreEl.innerHTML = score; timeEl.innerHTML = gameTime; coinsEl.innerHTML = coins;
-            clearInterval(spawnInterval); clearInterval(difficultyIncreaseInterval); clearInterval(collectibleInterval); clearInterval(powerUpInterval); clearInterval(coinInterval);
+            clearInterval(spawnInterval); clearInterval(difficultyIncreaseInterval); clearInterval(collectibleInterval); clearInterval(powerUpInterval); clearInterval(coinInterval); clearInterval(obstacleInterval);
             spawnInterval = setInterval(spawnEnemy, spawnRate);
             collectibleInterval = setInterval(spawnCollectible, 2000);
             powerUpInterval = setInterval(spawnPowerUp, 8000);
             coinInterval = setInterval(spawnCoin, 3000);
+            if (stageId === 'stage3') { obstacleInterval = setInterval(spawnObstacle, 6000); }
             difficultyIncreaseInterval = setInterval(() => { if (spawnRate > 250) { spawnRate -= 50; clearInterval(spawnInterval); spawnInterval = setInterval(spawnEnemy, spawnRate); } }, 5000);
         }
         
@@ -477,11 +564,14 @@
             const color = `hsl(${Math.random() * 360}, 50%, 50%)`;
             if (enemyType === 'fast') { enemies.push(new FastEnemy(x, y, radius, color, velocity)); } 
             else if (enemyType === 'wavy') { enemies.push(new WavyEnemy(x, y, radius, color, velocity)); } 
+            else if (enemyType === 'giant') { enemies.push(new GiantEnemy(x, y, radius, color, velocity)); } 
+            else if (enemyType === 'teleporter') { enemies.push(new TeleporterEnemy(x, y, radius, color, velocity)); } 
             else { enemies.push(new Enemy(x, y, radius, color, velocity)); }
         }
         function spawnCollectible() { const radius = 5; const x = Math.random() * canvas.width; const y = Math.random() * canvas.height; const color = 'hsl(100, 80%, 60%)'; collectibles.push(new Collectible(x, y, radius, color)); }
         function spawnCoin() { const radius = 8; const x = Math.random() * canvas.width; const y = Math.random() * canvas.height; coinsArr.push(new Coin(x, y, radius, 'gold')); }
         function spawnPowerUp() { const radius = 12; const x = Math.random() * canvas.width; const y = Math.random() * canvas.height; const rand = Math.random(); if (rand < 0.20) { powerUps.push(new PowerUp(x, y, radius, 'hsl(50, 100%, 50%)', 'immunity')); } else if (rand < 0.40) { powerUps.push(new PowerUp(x, y, radius, 'hsl(280, 100%, 60%)', 'shrink')); } else if (rand < 0.60) { powerUps.push(new PowerUp(x, y, radius, 'hsl(180, 100%, 50%)', 'timeStop')); } else if (rand < 0.80) { powerUps.push(new PowerUp(x, y, radius, 'hsl(30, 100%, 50%)', 'slowMotion')); } else { powerUps.push(new PowerUp(x, y, radius, 'hsl(220, 80%, 60%)', 'magnet')); } }
+        function spawnObstacle() { const width = Math.random() * 200 + 100; const height = Math.random() * 200 + 100; const x = Math.random() * (canvas.width - width); const y = Math.random() * (canvas.height - height); const lifetime = 300; obstacles.push(new Obstacle(x, y, width, height, lifetime)); }
         function activatePowerUp(type) { sfx.powerup.triggerAttackRelease("C5", "0.2"); const data = UPGRADE_DATA[type]; const upgrade = upgrades[type]; const duration = data.baseDuration + (upgrade.level * data.durationIncrease); activePowerUps.push({ type: type, name: data.name, expiryTime: Date.now() + duration }); }
         
         function animate() {
@@ -500,8 +590,19 @@
             let speedModifier = isSlowed ? 0.4 : 1;
             if (isTimeStopped) speedModifier = 0;
 
-            ctx.fillStyle = 'rgba(17, 17, 17, 0.1)';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            if (currentStageId === 'stage3') {
+                backgroundHue = (backgroundHue + 0.1) % 360;
+                const color1 = `hsl(${backgroundHue}, 100%, 10%)`;
+                const color2 = `hsl(${(backgroundHue + 60) % 360}, 100%, 5%)`;
+                const gradient = ctx.createRadialGradient(player.x, player.y, 50, canvas.width / 2, canvas.height / 2, canvas.width);
+                gradient.addColorStop(0, color1);
+                gradient.addColorStop(1, color2);
+                ctx.fillStyle = gradient;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            } else {
+                ctx.fillStyle = 'rgba(17, 17, 17, 0.1)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+            }
             
             player.x += (mouse.x - player.x) * 0.1; player.y += (mouse.y - player.y) * 0.1;
             player.draw();
@@ -518,6 +619,19 @@
                      else { sfx.collect.triggerAttackRelease("C6", "0.1"); score += 100 * xpMultiplier; scoreEl.innerHTML = score; collectibles.splice(collectibles.indexOf(item), 1); }
                 }
             });
+
+            obstacles.forEach((obstacle, index) => {
+                obstacle.update();
+                if (obstacle.isActive && obstacle.lifetime <= 0) {
+                    obstacles.splice(index, 1);
+                }
+                // Collision check only if the obstacle is active
+                if ( obstacle.isActive && !player.isImmune && !isGodMode && 
+                    player.x + player.radius > obstacle.x && player.x - player.radius < obstacle.x + obstacle.width && 
+                    player.y + player.radius > obstacle.y && player.y - player.radius < obstacle.y + obstacle.height ) { 
+                    endGame(); 
+                }
+            });
             
             enemies.forEach((enemy) => { enemy.update(speedModifier, isTimeStopped); if (Math.hypot(player.x - enemy.x, player.y - enemy.y) - enemy.radius - player.radius < 1 && !player.isImmune && !isGodMode) { endGame(); } });
         }
@@ -528,13 +642,13 @@
             Tone.Transport.stop();
             sfx.gameOver.triggerAttackRelease("C2", "0.5");
             cancelAnimationFrame(animationId);
-            clearInterval(spawnInterval); clearInterval(difficultyIncreaseInterval); clearInterval(collectibleInterval); clearInterval(powerUpInterval); clearInterval(coinInterval);
+            clearInterval(spawnInterval); clearInterval(difficultyIncreaseInterval); clearInterval(collectibleInterval); clearInterval(powerUpInterval); clearInterval(coinInterval); clearInterval(obstacleInterval);
             totalCoins += coins;
             if (gameTime > (highScores[currentStageId] || 0)) {
                 highScores[currentStageId] = gameTime;
             }
             const currentStageData = STAGES[currentStageId];
-            if (score >= currentStageData.scoreToUnlockNext && currentStageData.nextStage && !unlockedStages.includes(currentStageData.nextStage)) {
+            if (currentStageData && score >= currentStageData.scoreToUnlockNext && currentStageData.nextStage && !unlockedStages.includes(currentStageData.nextStage)) {
                 unlockedStages.push(currentStageData.nextStage);
             }
             saveData();
