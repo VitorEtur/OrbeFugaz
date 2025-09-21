@@ -73,6 +73,9 @@
             transform: translate(-50%, -50%);
             font-size: 14px;
         }
+        .tab-content.hidden {
+            display: none;
+        }
     </style>
 </head>
 <body class="bg-gray-900 text-white select-none">
@@ -81,20 +84,23 @@
     <canvas id="gameCanvas"></canvas>
 
     <!-- Interface do Usuário -->
-    <div id="gameUi" class="absolute top-0 left-0 w-full p-6 flex justify-between items-center text-lg ui-element" style="display: none;">
+    <div id="gameUi" class="absolute top-0 left-0 w-full p-6 flex justify-between items-start text-lg ui-element" style="display: none;">
         <div>
-            <span>Pontuação: </span><span id="scoreEl">0</span>
+             <div id="healthBarContainer" class="w-48 bg-gray-700 rounded-full h-6 border-2 border-gray-500">
+                <div id="healthBar" class="bg-red-500 h-full rounded-full transition-all duration-300"></div>
+            </div>
+            <span class="text-sm ml-2"><span id="healthText">3 / 3</span></span>
         </div>
-        <div>
-            <!-- Coin Icon SVG -->
-            <svg class="w-6 h-6 inline-block -mt-1" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15c-2.06 0-3.88-.93-5.13-2.36l1.42-1.42C9.21 14.13 10.53 15 12 15s2.79-.87 3.71-1.78l1.42 1.42C15.88 16.07 14.06 17 12 17zm-1-5H9.5v-2H11V8h2v2h1.5v2H13v2h-2v-2z" fill="#fbbF24"></path></svg>
-            <span id="coinsEl">0</span>
-        </div>
-        <div>
+        <div class="text-center">
+            <span>Pontuação: </span><span id="scoreEl">0</span><br>
             <span>Tempo: </span><span id="timeEl">0</span>s
         </div>
-        <div>
-            <span>Recorde da Fase: </span><span id="highScoreEl">0</span>s
+        <div class="text-right">
+             <div>
+                <svg class="w-6 h-6 inline-block -mt-1" viewBox="0 0 24 24" fill="currentColor" xmlns="http://www.w3.org/2000/svg"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 15c-2.06 0-3.88-.93-5.13-2.36l1.42-1.42C9.21 14.13 10.53 15 12 15s2.79-.87 3.71-1.78l1.42 1.42C15.88 16.07 14.06 17 12 17zm-1-5H9.5v-2H11V8h2v2h1.5v2H13v2h-2v-2z" fill="#fbbF24"></path></svg>
+                <span id="coinsEl">0</span>
+            </div>
+            <span>Recorde: </span><span id="highScoreEl">0</span>s
         </div>
     </div>
 
@@ -150,12 +156,42 @@
 
     <!-- Modal de Upgrades -->
     <div id="upgradeModalEl" class="fixed inset-0 flex-col items-center justify-center ui-element p-4" style="display: none;">
-        <div class="modal-bg rounded-2xl p-8 text-center w-full max-w-5xl">
+        <div class="modal-bg rounded-2xl p-8 text-center w-full max-w-6xl">
             <h1 class="text-4xl font-bold neon-text mb-2">Melhorias</h1>
             <p class="text-amber-400 text-2xl mb-6">Total de Moedas: <span id="totalCoinsEl">0</span></p>
-            <div id="upgradesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 text-left">
-                <!-- Cards de Upgrade injetados aqui -->
+            
+            <!-- Tabs -->
+            <div class="border-b border-gray-600 mb-4">
+                <nav class="-mb-px flex justify-center space-x-8" aria-label="Tabs">
+                    <button id="tab-player" class="tab-btn border-b-2 font-medium px-1 py-4 text-lg border-green-400 text-green-300">
+                        Atributos
+                    </button>
+                    <button id="tab-weapon" class="tab-btn border-b-2 font-medium px-1 py-4 text-lg border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-400">
+                        Arma
+                    </button>
+                    <button id="tab-powerup" class="tab-btn border-b-2 font-medium px-1 py-4 text-lg border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-400">
+                        Power-ups
+                    </button>
+                </nav>
             </div>
+
+            <!-- Tab Content -->
+            <div id="content-player" class="tab-content">
+                <div id="playerUpgradesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-left">
+                    <!-- Cards de Upgrade do Jogador -->
+                </div>
+            </div>
+            <div id="content-weapon" class="tab-content hidden">
+                <div id="weaponUpgradesContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-left">
+                    <!-- Cards de Upgrade da Arma -->
+                </div>
+            </div>
+            <div id="content-powerup" class="tab-content hidden">
+                <div id="powerUpUpgradesContainer" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-left">
+                    <!-- Cards de Upgrade de Power-ups -->
+                </div>
+            </div>
+
             <button id="closeUpgradeBtn" class="mt-8 bg-gray-600 hover:bg-gray-500 text-white font-bold py-2 px-6 rounded-lg text-lg transition duration-300">Voltar</button>
         </div>
     </div>
@@ -218,12 +254,16 @@
         const canvas = document.getElementById('gameCanvas');
         const ctx = canvas.getContext('2d');
         const gameUi = document.getElementById('gameUi');
+        const healthBar = document.getElementById('healthBar');
+        const healthText = document.getElementById('healthText');
         const coinsEl = document.getElementById('coinsEl');
         const modalCoinsEl = document.getElementById('modalCoinsEl');
         const upgradeBtn = document.getElementById('upgradeBtn');
         const upgradeModalEl = document.getElementById('upgradeModalEl');
         const closeUpgradeBtn = document.getElementById('closeUpgradeBtn');
-        const upgradesContainer = document.getElementById('upgradesContainer');
+        const powerUpUpgradesContainer = document.getElementById('powerUpUpgradesContainer');
+        const weaponUpgradesContainer = document.getElementById('weaponUpgradesContainer');
+        const playerUpgradesContainer = document.getElementById('playerUpgradesContainer');
         const totalCoinsEl = document.getElementById('totalCoinsEl');
         const scoreEl = document.getElementById('scoreEl');
         const timeEl = document.getElementById('timeEl');
@@ -244,6 +284,13 @@
         const glossaryModalEl = document.getElementById('glossaryModalEl');
         const closeGlossaryBtn = document.getElementById('closeGlossaryBtn');
         const glossaryContainer = document.getElementById('glossaryContainer');
+        // Upgrade Modal Tabs
+        const tabPlayer = document.getElementById('tab-player');
+        const tabWeapon = document.getElementById('tab-weapon');
+        const tabPowerup = document.getElementById('tab-powerup');
+        const contentPlayer = document.getElementById('content-player');
+        const contentWeapon = document.getElementById('content-weapon');
+        const contentPowerup = document.getElementById('content-powerup');
         // Mod Menu Elements
         const modMenuEl = document.getElementById('modMenuEl');
         const godModeCheckbox = document.getElementById('godModeCheckbox');
@@ -270,6 +317,8 @@
         // --- Dados do Jogo ---
         let totalCoins = 0;
         let upgrades = {};
+        let weaponUpgrades = {};
+        let playerUpgrades = {};
         let highScores = {};
         let unlockedStages = ['stage1'];
         let seenEnemies = [];
@@ -301,6 +350,17 @@
             magnet: { name: 'Ímã de Coleta', description: 'Puxa todas as moedas e XP até você.', baseDuration: 10000, durationIncrease: 1000, baseCost: 20 },
             doubler: { name: 'Multiplicador', description: 'Dobra todas as moedas e XP coletados.', baseDuration: 8000, durationIncrease: 800, baseCost: 25 },
             shockwave: { name: 'Onda de Choque', description: 'Libera ondas que destroem inimigos próximos.', baseDuration: 10000, durationIncrease: 1000, baseCost: 30 },
+            ricochet: { name: 'Disparo Ricochete', description: 'Dispara um projétil que ricocheteia e atravessa inimigos.', baseDuration: 10000, durationIncrease: 1000, baseCost: 35 },
+        };
+
+        const WEAPON_UPGRADE_DATA = {
+            homing: { name: 'Disparo Teleguiado', description: 'Dispara automaticamente um projétil teleguiado e forte.', baseCost: 100, maxLevel: 1 },
+            multiShot: { name: 'Disparo Múltiplo', description: 'Dispara projéteis extras em leque. (+2 por nível)', baseCost: 50, increaseCost: 50, maxLevel: 4 }
+        };
+        
+        const PLAYER_UPGRADE_DATA = {
+            maxHealth: { name: 'Vida Máxima', description: 'Aumenta a sua vida máxima em 1 ponto.', baseCost: 75, increaseCost: 75, maxLevel: 7 },
+            regeneration: { name: 'Regeneração', description: 'Recupera 1 de vida a cada 30 segundos.', baseCost: 150, maxLevel: 1 }
         };
 
         const ENEMY_DATA = {
@@ -318,10 +378,12 @@
         const sfx = {
             collect: new Tone.PolySynth(Tone.Synth, { oscillator: { type: "sine" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.1, release: 0.2 } }).toDestination(),
             coin: new Tone.PolySynth(Tone.Synth, { oscillator: { type: "square" }, envelope: { attack: 0.01, decay: 0.05, sustain: 0.1, release: 0.1 } }).toDestination(),
-            powerup: new Tone.Synth({ oscillator: { type: "triangle8" }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.3 } }).toDestination(),
-            shoot: new Tone.Synth({ oscillator: { type: "fmsine", modulationIndex: 10 }, envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }, volume: -20 }).toDestination(),
-            hit: new Tone.MembraneSynth({ pitchDecay: 0.05, octaves: 2, oscillator: { type: "sine" }, envelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.1 }, volume: -15 }).toDestination(),
-            shockwave: new Tone.MembraneSynth({ pitchDecay: 0.01, octaves: 10, oscillator: { type: "sine" }, envelope: { attack: 0.001, decay: 0.2, sustain: 0.01, release: 0.2 } }).toDestination(),
+            powerup: new Tone.PolySynth(Tone.Synth, { oscillator: { type: "triangle8" }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.3 } }).toDestination(),
+            shoot: new Tone.PolySynth(Tone.Synth, { oscillator: { type: "fmsine", modulationIndex: 10 }, envelope: { attack: 0.01, decay: 0.1, sustain: 0, release: 0.1 }, volume: -20 }).toDestination(),
+            hit: new Tone.PolySynth(Tone.MembraneSynth, { pitchDecay: 0.05, octaves: 2, oscillator: { type: "sine" }, envelope: { attack: 0.001, decay: 0.2, sustain: 0, release: 0.1 }, volume: -15 }).toDestination(),
+            heal: new Tone.PolySynth(Tone.Synth, { oscillator: { type: "sine" }, envelope: { attack: 0.01, decay: 0.2, sustain: 0.1, release: 0.3 }, volume: -10 }).toDestination(),
+            playerHit: new Tone.PolySynth(Tone.Synth, { oscillator: { type: "fatsawtooth" }, envelope: { attack: 0.01, decay: 0.3, sustain: 0, release: 0.2 }, volume: -5 }).toDestination(),
+            shockwave: new Tone.PolySynth(Tone.MembraneSynth, { pitchDecay: 0.01, octaves: 10, oscillator: { type: "sine" }, envelope: { attack: 0.001, decay: 0.2, sustain: 0.01, release: 0.2 } }).toDestination(),
             gameOver: new Tone.Synth({ oscillator: { type: "fmsquare" }, envelope: { attack: 0.01, decay: 0.5, sustain: 0.1, release: 0.8 } }).toDestination(),
             upgrade: new Tone.Synth({ oscillator: { type: "sawtooth" }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.2 } }).toDestination(),
         };
@@ -346,8 +408,11 @@
         
         // --- Classes do Jogo ---
         class Player { 
-            constructor(x, y, radius, color) { this.x = x; this.y = y; this.radius = radius; this.color = color; this.isImmune = false; this.originalColor = color; this.trail = []; }
+            constructor(x, y, radius, color) { this.x = x; this.y = y; this.radius = radius; this.color = color; this.isImmune = false; this.originalColor = color; this.trail = []; this.maxHealth = 3 + (playerUpgrades.maxHealth?.level || 0); this.health = this.maxHealth; this.lastHitTime = 0; }
             draw() { 
+                const isHit = Date.now() - this.lastHitTime < 200;
+                if (isHit && frames % 4 < 2) return; // Flickering effect
+
                 this.trail.forEach((p, i) => { const opacity = 0.5 * (i / this.trail.length); ctx.beginPath(); ctx.arc(p.x, p.y, (this.radius * i) / this.trail.length, 0, Math.PI * 2); ctx.fillStyle = `rgba(255, 255, 255, ${opacity})`; ctx.fill(); });
                 ctx.beginPath(); 
                 ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false); 
@@ -364,6 +429,16 @@
                 this.x += (mouse.x - this.x) * 0.1;
                 this.y += (mouse.y - this.y) * 0.1;
                 this.draw();
+            }
+            takeDamage(amount) {
+                if (isGodMode || this.isImmune) return;
+                this.health -= amount;
+                this.lastHitTime = Date.now();
+                sfx.playerHit.triggerAttackRelease("A2", "0.2");
+                updateHealthBar();
+                if (this.health <= 0) {
+                    endGame();
+                }
             }
         }
         class Enemy {
@@ -468,9 +543,24 @@
                 ctx.restore();
             }
         }
+        class HealthDrop extends Collectible {
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.fillStyle = 'hsl(0, 100%, 60%)';
+                ctx.shadowColor = 'red';
+                ctx.shadowBlur = 15;
+                ctx.beginPath();
+                ctx.moveTo(0, -this.radius * 0.5);
+                ctx.bezierCurveTo(this.radius * 0.8, -this.radius * 1.2, this.radius * 1.5, -this.radius * 0.2, 0, this.radius);
+                ctx.bezierCurveTo(-this.radius * 1.5, -this.radius * 0.2, -this.radius * 0.8, -this.radius * 1.2, 0, -this.radius * 0.5);
+                ctx.fill();
+                ctx.restore();
+            }
+        }
         class PowerUp extends Collectible {
              constructor(x, y, radius, color, type) { super(x, y, radius, color); this.type = type; }
-            draw() { ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(frames * 0.02); ctx.fillStyle = this.color; ctx.shadowColor = this.color; ctx.shadowBlur = 15; ctx.beginPath(); if (this.type === 'immunity') { for (let i = 0; i < 5; i++) { ctx.lineTo(Math.cos((18 + i * 72) / 180 * Math.PI) * this.radius, -Math.sin((18 + i * 72) / 180 * Math.PI) * this.radius); ctx.lineTo(Math.cos((54 + i * 72) / 180 * Math.PI) * this.radius / 2, -Math.sin((54 + i * 72) / 180 * Math.PI) * this.radius / 2); } } else if (this.type === 'shrink') { ctx.rect(-this.radius / 1.5, -this.radius / 1.5, this.radius * 1.5, this.radius * 1.5); } else if (this.type === 'timeStop') { ctx.rect(-this.radius / 2, -this.radius / 2, this.radius / 3, this.radius); ctx.rect(this.radius / 6, -this.radius / 2, this.radius / 3, this.radius); } else if (this.type === 'slowMotion') { ctx.moveTo(this.radius * 0.8, 0); ctx.lineWidth = 2; ctx.strokeStyle = this.color; for (let i = 0; i < 360; i++) { const angle = 0.1 * i; const r = this.radius * 0.8 * (1 - i / 360); ctx.lineTo(r * Math.cos(angle), r * Math.sin(angle)); } ctx.stroke(); } else if (this.type === 'magnet') { ctx.moveTo(-this.radius, -this.radius/2); ctx.lineTo(this.radius, -this.radius/2); ctx.lineTo(this.radius, 0); ctx.lineTo(this.radius / 2, 0); ctx.lineTo(this.radius / 2, this.radius / 2); ctx.lineTo(-this.radius / 2, this.radius / 2); ctx.lineTo(-this.radius / 2, 0); ctx.lineTo(-this.radius, 0); ctx.closePath(); } else if (this.type === 'doubler') { ctx.font = `bold ${this.radius*1.5}px Inter`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('2x', 0, 0); } else if (this.type === 'shockwave') { ctx.arc(0, 0, this.radius, 0, Math.PI * 2); ctx.moveTo(0,0); ctx.arc(0,0, this.radius*0.6, 0, Math.PI*2, true); } ctx.fill(); ctx.restore(); ctx.shadowBlur = 0; }
+            draw() { ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(frames * 0.02); ctx.fillStyle = this.color; ctx.shadowColor = this.color; ctx.shadowBlur = 15; ctx.beginPath(); if (this.type === 'immunity') { for (let i = 0; i < 5; i++) { ctx.lineTo(Math.cos((18 + i * 72) / 180 * Math.PI) * this.radius, -Math.sin((18 + i * 72) / 180 * Math.PI) * this.radius); ctx.lineTo(Math.cos((54 + i * 72) / 180 * Math.PI) * this.radius / 2, -Math.sin((54 + i * 72) / 180 * Math.PI) * this.radius / 2); } } else if (this.type === 'shrink') { ctx.rect(-this.radius / 1.5, -this.radius / 1.5, this.radius * 1.5, this.radius * 1.5); } else if (this.type === 'timeStop') { ctx.rect(-this.radius / 2, -this.radius / 2, this.radius / 3, this.radius); ctx.rect(this.radius / 6, -this.radius / 2, this.radius / 3, this.radius); } else if (this.type === 'slowMotion') { ctx.moveTo(this.radius * 0.8, 0); ctx.lineWidth = 2; ctx.strokeStyle = this.color; for (let i = 0; i < 360; i++) { const angle = 0.1 * i; const r = this.radius * 0.8 * (1 - i / 360); ctx.lineTo(r * Math.cos(angle), r * Math.sin(angle)); } ctx.stroke(); } else if (this.type === 'magnet') { ctx.moveTo(-this.radius, -this.radius/2); ctx.lineTo(this.radius, -this.radius/2); ctx.lineTo(this.radius, 0); ctx.lineTo(this.radius / 2, 0); ctx.lineTo(this.radius / 2, this.radius / 2); ctx.lineTo(-this.radius / 2, this.radius / 2); ctx.lineTo(-this.radius / 2, 0); ctx.lineTo(-this.radius, 0); ctx.closePath(); } else if (this.type === 'doubler') { ctx.font = `bold ${this.radius*1.5}px Inter`; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('2x', 0, 0); } else if (this.type === 'shockwave') { ctx.arc(0, 0, this.radius, 0, Math.PI * 2); ctx.moveTo(0,0); ctx.arc(0,0, this.radius*0.6, 0, Math.PI*2, true); } else if (this.type === 'ricochet') { ctx.arc(0,0,this.radius,0,Math.PI*2); ctx.moveTo(0, -this.radius*0.5); ctx.lineTo(0, this.radius*0.5); ctx.moveTo(-this.radius*0.5,0); ctx.lineTo(this.radius*0.5,0); ctx.stroke(); } ctx.fill(); ctx.restore(); ctx.shadowBlur = 0; }
         }
         class Obstacle {
             constructor(x, y, width, height, lifetime) { this.x = x; this.y = y; this.width = width; this.height = height; this.lifetime = lifetime; this.initialLifetime = lifetime; this.warmupTime = 90; this.currentWarmup = this.warmupTime; this.isActive = false; }
@@ -489,15 +579,35 @@
             update() { this.draw(); this.velocity.x *= 0.99; this.velocity.y *= 0.99; this.x += this.velocity.x; this.y += this.velocity.y; this.alpha -= 0.02; }
         }
         class Projectile {
-            constructor(x, y, radius, color, velocity) { this.x = x; this.y = y; this.radius = radius; this.color = color; this.velocity = velocity; }
+            constructor(x, y, radius, color, velocity, damage = 1) { this.x = x; this.y = y; this.radius = radius; this.color = color; this.velocity = velocity; this.damage = damage;}
             draw() { ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2, false); ctx.fillStyle = this.color; ctx.fill(); }
             update() { this.draw(); this.x += this.velocity.x; this.y += this.velocity.y; }
         }
+        class HomingProjectile extends Projectile {
+            constructor(x, y, radius, color, velocity) { super(x, y, radius, color, velocity, 2); this.turnSpeed = 0.1;}
+            update() {
+                let nearestEnemy = null; let minDistance = Infinity;
+                enemies.forEach(enemy => { const dist = Math.hypot(this.x - enemy.x, this.y - enemy.y); if (dist < minDistance) { minDistance = dist; nearestEnemy = enemy; } });
+                if (nearestEnemy) { const angle = Math.atan2(nearestEnemy.y - this.y, nearestEnemy.x - this.x); this.velocity.x += Math.cos(angle) * this.turnSpeed; this.velocity.y += Math.sin(angle) * this.turnSpeed; const mag = Math.hypot(this.velocity.x, this.velocity.y); this.velocity.x = (this.velocity.x / mag) * 7; this.velocity.y = (this.velocity.y / mag) * 7; }
+                super.update();
+            }
+        }
+        class RicochetProjectile extends Projectile {
+            constructor(x, y, radius, color, velocity) { super(x, y, radius, color, velocity, 1); this.bounces = 3; this.piercedEnemies = [];}
+            update() {
+                if (this.x - this.radius <= 0 || this.x + this.radius >= canvas.width) { this.velocity.x *= -1; this.bounces--; }
+                if (this.y - this.radius <= 0 || this.y + this.radius >= canvas.height) { this.velocity.y *= -1; this.bounces--; }
+                if (this.bounces < 0) this.alpha = 0; // Mark for deletion
+                this.piercedEnemies = [];
+                super.update();
+            }
+        }
 
         // --- Variáveis do Jogo ---
-        let player, spawnInterval, difficultyIncreaseInterval, collectibleInterval, powerUpInterval, coinInterval, obstacleInterval;
-        let enemies = [], collectibles = [], powerUps = [], coinsArr = [], obstacles = [], shockwaves = [], particles = [], projectiles = [];
+        let player, spawnInterval, difficultyIncreaseInterval, collectibleInterval, powerUpInterval, coinInterval, obstacleInterval, regenInterval;
+        let enemies = [], collectibles = [], powerUps = [], coinsArr = [], obstacles = [], shockwaves = [], particles = [], projectiles = [], healthDrops = [];
         let spawnRate = 1000;
+        let lastHomingShotTime = 0;
         const mouse = { x: window.innerWidth / 2, y: window.innerHeight / 2 };
         const keys = { w: false, a: false, s: false, d: false };
         let lastShotTime = 0;
@@ -510,6 +620,10 @@
             if (savedColor && PLAYER_COLORS.includes(savedColor)) { playerColor = savedColor; }
             const savedUpgrades = JSON.parse(localStorage.getItem('orbFugazUpgrades'));
             if (savedUpgrades) { upgrades = savedUpgrades; } else { for (const key in UPGRADE_DATA) upgrades[key] = { level: 0 }; }
+            const savedWeaponUpgrades = JSON.parse(localStorage.getItem('orbFugazWeaponUpgrades'));
+            if (savedWeaponUpgrades) { weaponUpgrades = savedWeaponUpgrades; } else { for (const key in WEAPON_UPGRADE_DATA) weaponUpgrades[key] = { level: 0 }; }
+            const savedPlayerUpgrades = JSON.parse(localStorage.getItem('orbFugazPlayerUpgrades'));
+            if (savedPlayerUpgrades) { playerUpgrades = savedPlayerUpgrades; } else { for (const key in PLAYER_UPGRADE_DATA) playerUpgrades[key] = { level: 0 }; }
             const savedHighScores = JSON.parse(localStorage.getItem('orbFugazHighScores'));
             if(savedHighScores) highScores = savedHighScores; else for (const key in STAGES) highScores[key] = 0;
             const savedUnlockedStages = JSON.parse(localStorage.getItem('orbFugazUnlockedStages'));
@@ -522,6 +636,8 @@
             localStorage.setItem('orbFugazTotalCoins', totalCoins);
             localStorage.setItem('orbFugazPlayerColor', playerColor);
             localStorage.setItem('orbFugazUpgrades', JSON.stringify(upgrades));
+            localStorage.setItem('orbFugazWeaponUpgrades', JSON.stringify(weaponUpgrades));
+            localStorage.setItem('orbFugazPlayerUpgrades', JSON.stringify(playerUpgrades));
             localStorage.setItem('orbFugazHighScores', JSON.stringify(highScores));
             localStorage.setItem('orbFugazUnlockedStages', JSON.stringify(unlockedStages));
             localStorage.setItem('orbFugazSeenEnemies', JSON.stringify(seenEnemies));
@@ -542,25 +658,84 @@
         }
 
         function getPowerUpIconSVG(type) {
-            const icons = { immunity: `<svg viewBox="0 0 24 24" fill="currentColor" class="w-12 h-12 mx-auto"><path d="M12,17.27L18.18,21l-1.64-7.03L22,9.24l-7.19-0.61L12,2L9.19,8.63L2,9.24l5.46,4.73L5.82,21L12,17.27z"></path></svg>`, shrink: `<svg viewBox="0 0 24 24" fill="currentColor" class="w-12 h-12 mx-auto"><path d="M21 3H3v18h18V3zM19 19H5V5h14v14z"/><path d="M15 9h-6v6h6V9z"/></svg>`, timeStop: `<svg viewBox="0 0 24 24" fill="currentColor" class="w-12 h-12 mx-auto"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`, slowMotion: `<svg class="w-12 h-12 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 8 10"></polyline></svg>`, magnet: `<svg class="w-12 h-12 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 6v5a7 7 0 1 1-14 0V6 M5 6h4m6 0h4"/></svg>`, doubler: `<svg class="w-12 h-12 mx-auto" viewBox="0 0 24 24" fill="currentColor"><path d="M3,3V5H5V3H3M7,3V5H9V3H7M11,3V5H13V3H11M15,3V5H17V3H15M19,3V5H21V3H19M5,7V9H3V7H5M3,11V13H5V11H3M3,15V17H5V15H3M3,19V21H5V19H3M21,7V9H19V7H21M19,11V13H21V11H19M21,15V17H19V15H21M19,19V21H21V19H19M7.5,7L9,9H7V11H9L7.5,13H9.5L11,11V9L9.5,7H7.5M13.5,7L15,9H13V11H15L13.5,13H15.5L17,11V9L15.5,7H13.5Z"/></svg>`, shockwave: `<svg class="w-12 h-12 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 12a8 8 0 0 1 8-8m8 8a8 8 0 0 0-8-8m0 16a8 8 0 0 0 8-8m-8 8a8 8 0 0 1-8-8m0 0a1 1 0 1 0 0 0z"/><path d="M9 12a3 3 0 1 1 6 0 3 3 0 0 1-6 0z"/></svg>` };
+            const icons = { immunity: `<svg viewBox="0 0 24 24" fill="currentColor" class="w-12 h-12 mx-auto"><path d="M12,17.27L18.18,21l-1.64-7.03L22,9.24l-7.19-0.61L12,2L9.19,8.63L2,9.24l5.46,4.73L5.82,21L12,17.27z"></path></svg>`, shrink: `<svg viewBox="0 0 24 24" fill="currentColor" class="w-12 h-12 mx-auto"><path d="M21 3H3v18h18V3zM19 19H5V5h14v14z"/><path d="M15 9h-6v6h6V9z"/></svg>`, timeStop: `<svg viewBox="0 0 24 24" fill="currentColor" class="w-12 h-12 mx-auto"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`, slowMotion: `<svg class="w-12 h-12 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 8 10"></polyline></svg>`, magnet: `<svg class="w-12 h-12 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 6v5a7 7 0 1 1-14 0V6 M5 6h4m6 0h4"/></svg>`, doubler: `<svg class="w-12 h-12 mx-auto" viewBox="0 0 24 24" fill="currentColor"><path d="M3,3V5H5V3H3M7,3V5H9V3H7M11,3V5H13V3H11M15,3V5H17V3H15M19,3V5H21V3H19M5,7V9H3V7H5M3,11V13H5V11H3M3,15V17H5V15H3M3,19V21H5V19H3M21,7V9H19V7H21M19,11V13H21V11H19M21,15V17H19V15H21M19,19V21H21V19H19M7.5,7L9,9H7V11H9L7.5,13H9.5L11,11V9L9.5,7H7.5M13.5,7L15,9H13V11H15L13.5,13H15.5L17,11V9L15.5,7H13.5Z"/></svg>`, shockwave: `<svg class="w-12 h-12 mx-auto" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 12a8 8 0 0 1 8-8m8 8a8 8 0 0 0-8-8m0 16a8 8 0 0 0 8-8m-8 8a8 8 0 0 1-8-8m0 0a1 1 0 1 0 0 0z"/><path d="M9 12a3 3 0 1 1 6 0 3 3 0 0 1-6 0z"/></svg>`, ricochet: `<svg class="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.59 14.37a6 6 0 01-5.84 7.38v-4.82m5.84-2.56a6 6 0 016 6H21m-7.22 0a6 6 0 01-6-6v-4.82m0 11.64A6 6 0 012.38 8.63m11.14 2.82a6 6 0 01-5.84-7.38v4.82m5.84 2.56a6 6 0 01-6-6H3m7.22 0a6 6 0 016 6v4.82m0-11.64a6 6 0 015.84 7.38h-4.82m-5.84-2.56a6 6 0 016-6H21" /></svg>` };
             return icons[type] || '';
         }
 
         function renderUpgrades() {
-            upgradesContainer.innerHTML = ''; totalCoinsEl.textContent = totalCoins;
+            powerUpUpgradesContainer.innerHTML = ''; 
+            weaponUpgradesContainer.innerHTML = '';
+            playerUpgradesContainer.innerHTML = '';
+            totalCoinsEl.textContent = totalCoins;
+            const coinIcon = `<span class="text-yellow-400 font-bold">★</span>`;
+
+            // Render Player Upgrades
+            for (const key in PLAYER_UPGRADE_DATA) {
+                const upgrade = playerUpgrades[key], data = PLAYER_UPGRADE_DATA[key], card = document.createElement('div'), isLocked = upgrade.level === 0;
+                const isMaxLevel = upgrade.level >= data.maxLevel;
+                card.className = `upgrade-card p-4 rounded-lg flex flex-col justify-between text-center transition-all duration-300 ${isLocked ? 'grayscale opacity-80' : ''}`;
+                let infoHTML, buttonHTML;
+                if(isLocked) {
+                    const cost = data.baseCost;
+                    infoHTML = `<h3 class="text-xl font-bold text-gray-400">${data.name}</h3><p class="text-gray-300 mt-2 text-sm h-12">${data.description}</p>`;
+                    buttonHTML = `<button class="buy-btn w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded" data-skill="${key}" data-type="player" ${totalCoins < cost ? 'disabled' : ''}>Desbloquear (${cost} ${coinIcon})</button>`;
+                } else {
+                    const cost = data.baseCost + (upgrade.level * data.increaseCost);
+                    infoHTML = `<h3 class="text-xl font-bold text-white">${data.name}</h3><div class="text-sm h-12 mt-2"><p class="text-gray-300">Nível: ${upgrade.level} / ${data.maxLevel}</p><p class="text-gray-300">${data.maxLevel > 1 ? `Vida Máxima: ${3 + upgrade.level}` : 'Ativado'}</p></div>`;
+                    buttonHTML = `<button class="buy-btn w-full bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold py-2 px-4 rounded" data-skill="${key}" data-type="player" ${(totalCoins < cost || isMaxLevel) ? 'disabled' : ''}>${isMaxLevel ? 'Máximo' : `Melhorar (${cost} ${coinIcon})`}</button>`;
+                }
+                card.innerHTML = `<div class="flex-grow flex flex-col justify-between"><div>${infoHTML}</div><div class="mt-4">${buttonHTML}</div></div>`;
+                playerUpgradesContainer.appendChild(card);
+            }
+            
+            // Render Power-up Upgrades
             for (const key in UPGRADE_DATA) {
                 const upgrade = upgrades[key], data = UPGRADE_DATA[key], card = document.createElement('div'), isLocked = upgrade.level === 0;
                 card.className = `upgrade-card p-4 rounded-lg flex flex-col justify-between text-center transition-all duration-300 ${isLocked ? 'grayscale opacity-80' : ''}`;
-                const iconHTML = `<div class="mb-4 h-12 ${isLocked ? 'text-gray-500' : 'text-indigo-400'}">${getPowerUpIconSVG(key)}</div>`, coinIcon = `<span class="text-yellow-400 font-bold">★</span>`;
+                const iconHTML = `<div class="mb-4 h-12 ${isLocked ? 'text-gray-500' : 'text-indigo-400'}">${getPowerUpIconSVG(key)}</div>`;
                 let infoHTML, buttonHTML;
-                if (isLocked) { const cost = data.baseCost; infoHTML = `<h3 class="text-xl font-bold text-gray-400">${data.name}</h3><p class="text-gray-300 mt-2 text-sm h-12">${data.description}</p>`; buttonHTML = `<button class="buy-btn w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded transition-transform transform hover:scale-105" data-skill="${key}" ${totalCoins < cost ? 'disabled' : ''}>Desbloquear (${cost} ${coinIcon})</button>`; } else { const cost = data.baseCost + (upgrade.level * data.baseCost), currentDuration = (data.baseDuration + (upgrade.level - 1) * data.durationIncrease) / 1000; infoHTML = `<h3 class="text-xl font-bold text-white">${data.name}</h3><div class="text-sm h-12 mt-2"><p class="text-gray-300">Nível: ${upgrade.level}</p><p class="text-gray-300">Duração: ${currentDuration.toFixed(1)}s</p><p class="text-green-400">Próximo: +${(data.durationIncrease / 1000).toFixed(1)}s</p></div>`; buttonHTML = `<button class="buy-btn w-full bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold py-2 px-4 rounded transition-transform transform hover:scale-105" data-skill="${key}" ${totalCoins < cost ? 'disabled' : ''}>Melhorar (${cost} ${coinIcon})</button>`; }
+                if (isLocked) { const cost = data.baseCost; infoHTML = `<h3 class="text-xl font-bold text-gray-400">${data.name}</h3><p class="text-gray-300 mt-2 text-sm h-12">${data.description}</p>`; buttonHTML = `<button class="buy-btn w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded" data-skill="${key}" data-type="powerup" ${totalCoins < cost ? 'disabled' : ''}>Desbloquear (${cost} ${coinIcon})</button>`; } else { const cost = data.baseCost + (upgrade.level * data.baseCost), currentDuration = (data.baseDuration + (upgrade.level - 1) * data.durationIncrease) / 1000; infoHTML = `<h3 class="text-xl font-bold text-white">${data.name}</h3><div class="text-sm h-12 mt-2"><p class="text-gray-300">Nível: ${upgrade.level}</p><p class="text-gray-300">Duração: ${currentDuration.toFixed(1)}s</p><p class="text-green-400">Próximo: +${(data.durationIncrease / 1000).toFixed(1)}s</p></div>`; buttonHTML = `<button class="buy-btn w-full bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold py-2 px-4 rounded" data-skill="${key}" data-type="powerup" ${totalCoins < cost ? 'disabled' : ''}>Melhorar (${cost} ${coinIcon})</button>`; }
                 card.innerHTML = `${iconHTML}<div class="flex-grow flex flex-col justify-between"><div>${infoHTML}</div><div class="mt-4">${buttonHTML}</div></div>`;
-                upgradesContainer.appendChild(card);
+                powerUpUpgradesContainer.appendChild(card);
             }
-            document.querySelectorAll('.buy-btn').forEach(btn => btn.addEventListener('click', () => buyUpgrade(btn.dataset.skill)));
+
+            // Render Weapon Upgrades
+            for (const key in WEAPON_UPGRADE_DATA) {
+                const upgrade = weaponUpgrades[key], data = WEAPON_UPGRADE_DATA[key], card = document.createElement('div'), isLocked = upgrade.level === 0;
+                card.className = `upgrade-card p-4 rounded-lg flex flex-col justify-between text-center transition-all duration-300 ${isLocked ? 'grayscale opacity-80' : ''}`;
+                let infoHTML, buttonHTML;
+                if(isLocked) {
+                    const cost = data.baseCost;
+                    infoHTML = `<h3 class="text-xl font-bold text-gray-400">${data.name}</h3><p class="text-gray-300 mt-2 text-sm h-12">${data.description}</p>`;
+                    buttonHTML = `<button class="buy-btn w-full bg-green-600 hover:bg-green-500 text-white font-bold py-2 px-4 rounded" data-skill="${key}" data-type="weapon" ${totalCoins < cost ? 'disabled' : ''}>Desbloquear (${cost} ${coinIcon})</button>`;
+                } else {
+                    const cost = data.baseCost + (upgrade.level * data.increaseCost);
+                    const isMaxLevel = upgrade.level >= data.maxLevel;
+                    infoHTML = `<h3 class="text-xl font-bold text-white">${data.name}</h3><div class="text-sm h-12 mt-2"><p class="text-gray-300">Nível: ${upgrade.level} / ${data.maxLevel}</p><p class="text-gray-300">${data.maxLevel > 1 ? (isMaxLevel ? 'Nível Máximo!' : `Disparos: ${1 + upgrade.level * 2}`) : 'Ativado'}</p></div>`;
+                    buttonHTML = `<button class="buy-btn w-full bg-amber-500 hover:bg-amber-400 text-gray-900 font-bold py-2 px-4 rounded" data-skill="${key}" data-type="weapon" ${(totalCoins < cost || isMaxLevel) ? 'disabled' : ''}>${isMaxLevel ? 'Máximo' : `Melhorar (${cost} ${coinIcon})`}</button>`;
+                }
+                card.innerHTML = `<div class="flex-grow flex flex-col justify-between"><div>${infoHTML}</div><div class="mt-4">${buttonHTML}</div></div>`;
+                weaponUpgradesContainer.appendChild(card);
+            }
+
+            document.querySelectorAll('.buy-btn').forEach(btn => btn.addEventListener('click', () => buyUpgrade(btn.dataset.skill, btn.dataset.type)));
         }
         
-        function buyUpgrade(skill) { const upgrade = upgrades[skill], data = UPGRADE_DATA[skill], cost = data.baseCost + (upgrade.level * data.baseCost); if (totalCoins >= cost) { sfx.upgrade.triggerAttackRelease("E4", "0.1"); totalCoins -= cost; upgrade.level++; saveData(); renderUpgrades(); } }
+        function buyUpgrade(skill, type) { 
+            const upgradesObject = type === 'weapon' ? weaponUpgrades : (type === 'player' ? playerUpgrades : upgrades);
+            const dataObject = type === 'weapon' ? WEAPON_UPGRADE_DATA : (type === 'player' ? PLAYER_UPGRADE_DATA : UPGRADE_DATA);
+            
+            const upgrade = upgradesObject[skill], data = dataObject[skill];
+            const cost = data.baseCost + (upgrade.level * (data.increaseCost || data.baseCost)); 
+            
+            if (totalCoins >= cost && upgrade.level < (data.maxLevel || Infinity)) { 
+                sfx.upgrade.triggerAttackRelease("E4", "0.1"); 
+                totalCoins -= cost; 
+                upgrade.level++; 
+                saveData(); 
+                renderUpgrades(); 
+            } 
+        }
 
         function renderStageSelection() {
             stagesContainer.innerHTML = '';
@@ -598,14 +773,21 @@
             }
         }
 
+        function updateHealthBar() {
+            healthBar.style.width = `${(player.health / player.maxHealth) * 100}%`;
+            healthText.textContent = `${player.health} / ${player.maxHealth}`;
+        }
+
         // --- Funções do Jogo ---
         function resizeCanvas() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
         
         function init(stageId) {
             currentStageId = stageId; currentMusicNotes = STAGES[stageId].musicNotes; highScoreEl.innerHTML = highScores[stageId] || 0;
             player = new Player(canvas.width / 2, canvas.height / 2, originalPlayerRadius, playerColor);
-            enemies = []; collectibles = []; powerUps = []; coinsArr = []; obstacles = []; shockwaves = []; activePowerUps = []; particles = []; projectiles = [];
+            updateHealthBar();
+            enemies = []; collectibles = []; powerUps = []; coinsArr = []; obstacles = []; shockwaves = []; activePowerUps = []; particles = []; projectiles = []; healthDrops = [];
             score = 0; frames = 0; gameTime = 0; coins = 0; spawnRate = 1000; musicNoteIndex = 0;
+            lastHomingShotTime = 0;
             scoreEl.innerHTML = score; timeEl.innerHTML = gameTime; coinsEl.innerHTML = coins;
             backgroundStars = []; backgroundParticles = []; backgroundHoleParticles = [];
             if (stageId === 'stage1' || stageId === 'stage3') { for (let i = 0; i < 100; i++) backgroundStars.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, radius: Math.random() * 1.5, alpha: Math.random() * 0.5 + 0.5, parallax: Math.random() * 0.3 + 0.1 }); } 
@@ -613,12 +795,13 @@
             else if (stageId === 'stage4') { for (let i = 0; i < 150; i++) { const r = Math.random() * canvas.width / 2, a = Math.random() * Math.PI * 2; backgroundHoleParticles.push({ x: canvas.width / 2 + Math.cos(a) * r, y: canvas.height / 2 + Math.sin(a) * r, radius: Math.random() * 1.5, angle: a, distance: r, speed: Math.random() * 0.005 + 0.001 }); } }
             else if (stageId === 'stage5') { for (let i = 0; i < 150; i++) backgroundParticles.push({ x: Math.random() * canvas.width, y: Math.random() * canvas.height, speed: Math.random() * 10 + 5, radius: Math.random() * 1.5 + 0.5, length: Math.random() * 20 + 10, color: `rgba(200, 200, 220, ${Math.random() * 0.5 + 0.2})` }); }
 
-            clearInterval(spawnInterval); clearInterval(difficultyIncreaseInterval); clearInterval(collectibleInterval); clearInterval(powerUpInterval); clearInterval(coinInterval); clearInterval(obstacleInterval);
+            clearInterval(spawnInterval); clearInterval(difficultyIncreaseInterval); clearInterval(collectibleInterval); clearInterval(powerUpInterval); clearInterval(coinInterval); clearInterval(obstacleInterval); clearInterval(regenInterval);
             spawnInterval = setInterval(spawnEnemy, spawnRate);
             collectibleInterval = setInterval(spawnCollectible, 2000);
             powerUpInterval = setInterval(spawnPowerUp, 8000);
             coinInterval = setInterval(spawnCoin, 3000);
             if (stageId === 'stage3') obstacleInterval = setInterval(spawnObstacle, 6000);
+            if(playerUpgrades.regeneration.level > 0) { regenInterval = setInterval(() => { if (player.health < player.maxHealth) { player.health++; updateHealthBar(); sfx.heal.triggerAttackRelease("A5", "0.2"); } }, 30000); }
             difficultyIncreaseInterval = setInterval(() => { if (spawnRate > 250) { spawnRate -= 50; clearInterval(spawnInterval); spawnInterval = setInterval(spawnEnemy, spawnRate); } }, 5000);
         }
         
@@ -660,7 +843,7 @@
             const unlockedPowerUps = Object.keys(upgrades).filter(key => upgrades[key].level > 0); if (unlockedPowerUps.length === 0) return;
             const type = unlockedPowerUps[Math.floor(Math.random() * unlockedPowerUps.length)];
             let color;
-            switch (type) { case 'immunity': color = 'hsl(50, 100%, 50%)'; break; case 'shrink': color = 'hsl(280, 100%, 60%)'; break; case 'timeStop': color = 'hsl(180, 100%, 50%)'; break; case 'slowMotion': color = 'hsl(30, 100%, 50%)'; break; case 'magnet': color = 'hsl(220, 80%, 60%)'; break; case 'doubler': color = 'hsl(110, 100%, 50%)'; break; case 'shockwave': color = 'hsl(0, 100%, 70%)'; break; }
+            switch (type) { case 'immunity': color = 'hsl(50, 100%, 50%)'; break; case 'shrink': color = 'hsl(280, 100%, 60%)'; break; case 'timeStop': color = 'hsl(180, 100%, 50%)'; break; case 'slowMotion': color = 'hsl(30, 100%, 50%)'; break; case 'magnet': color = 'hsl(220, 80%, 60%)'; break; case 'doubler': color = 'hsl(110, 100%, 50%)'; break; case 'shockwave': color = 'hsl(0, 100%, 70%)'; break; case 'ricochet': color = 'hsl(150, 100%, 50%)'; break; }
             powerUps.push(new PowerUp(Math.random() * canvas.width, Math.random() * canvas.height, 12, color, type));
         }
         function spawnObstacle() { obstacles.push(new Obstacle(Math.random() * (canvas.width - 200), Math.random() * (canvas.height - 200), Math.random() * 200 + 100, Math.random() * 200 + 100, 300)); }
@@ -668,7 +851,7 @@
         function activatePowerUp(type) {
             sfx.powerup.triggerAttackRelease("C5", "0.2"); const data = UPGRADE_DATA[type], upgrade = upgrades[type], duration = data.baseDuration + ((upgrade.level - 1) * data.durationIncrease);
             const powerUp = { type: type, name: data.name, expiryTime: Date.now() + duration };
-            if (type === 'shockwave') powerUp.lastPulse = Date.now();
+            if (type === 'shockwave' || type === 'ricochet') powerUp.lastPulse = Date.now();
             activePowerUps.push(powerUp);
         }
         
@@ -678,8 +861,16 @@
             let isTimeStopped = activePowerUps.some(p => p.type === 'timeStop'), isSlowed = activePowerUps.some(p => p.type === 'slowMotion'), isMagnetActive = activePowerUps.some(p => p.type === 'magnet'), coinMultiplier = activePowerUps.some(p => p.type === 'doubler') ? 2 : 1;
             player.isImmune = activePowerUps.some(p => p.type === 'immunity'); player.radius = activePowerUps.some(p => p.type === 'shrink') ? originalPlayerRadius / 2 : originalPlayerRadius; player.color = player.isImmune || isGodMode ? 'hsl(0, 0%, 100%)' : player.originalColor;
             let speedModifier = isSlowed ? 0.4 : 1; if (isTimeStopped) speedModifier = 0;
+            const now = Date.now();
+
             const shockwavePowerup = activePowerUps.find(p => p.type === 'shockwave');
-            if (shockwavePowerup && Date.now() - shockwavePowerup.lastPulse > 2000) { sfx.shockwave.triggerAttackRelease("C2", "0.2"); shockwaves.push(new Shockwave(player.x, player.y, 10, 'white')); shockwavePowerup.lastPulse = Date.now(); }
+            if (shockwavePowerup && now - shockwavePowerup.lastPulse > 2000) { sfx.shockwave.triggerAttackRelease("C2", "0.2"); shockwaves.push(new Shockwave(player.x, player.y, 10, 'white')); shockwavePowerup.lastPulse = now; }
+            
+            const ricochetPowerup = activePowerUps.find(p => p.type === 'ricochet');
+            if(ricochetPowerup && now - ricochetPowerup.lastPulse > 3000) { const randAngle = Math.random() * Math.PI * 2; projectiles.push(new RicochetProjectile(player.x, player.y, 6, 'hsl(150, 100%, 50%)', {x: Math.cos(randAngle) * 5, y: Math.sin(randAngle) * 5})); sfx.shoot.triggerAttackRelease("A6", "0.1"); ricochetPowerup.lastPulse = now; }
+            
+            if(weaponUpgrades.homing.level > 0 && now - lastHomingShotTime > 4000) { const randAngle = Math.random() * Math.PI * 2; projectiles.push(new HomingProjectile(player.x, player.y, 6, 'hsl(50, 100%, 50%)', {x: Math.cos(randAngle) * 7, y: Math.sin(randAngle) * 7})); sfx.shoot.triggerAttackRelease("G6", "0.1"); lastHomingShotTime = now; }
+
             ctx.fillStyle = '#111827'; ctx.fillRect(0, 0, canvas.width, canvas.height);
             if (currentStageId === 'stage3') { 
                 backgroundHue = (backgroundHue + 0.1) % 360; const c1 = `hsl(${backgroundHue}, 100%, 10%)`, c2 = `hsl(${(backgroundHue + 60) % 360}, 100%, 5%)`, g = ctx.createRadialGradient(player.x, player.y, 50, canvas.width / 2, canvas.height / 2, canvas.width); g.addColorStop(0, c1); g.addColorStop(1, c2); ctx.fillStyle = g; ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -691,20 +882,31 @@
             else if (currentStageId === 'stage2') { backgroundParticles.forEach(p => { p.x += p.speed; if (p.x > canvas.width) { p.x = 0; p.y = Math.random() * canvas.height; } ctx.beginPath(); ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2); ctx.fillStyle = p.color; ctx.fill(); }); }
             if(!['stage3','stage4', 'stage5'].includes(currentStageId)) { ctx.fillStyle = 'rgba(17, 24, 39, 0.2)'; ctx.fillRect(0, 0, canvas.width, canvas.height); }
             player.update();
-            const now = Date.now();
             if (now - lastShotTime > shootCooldown) {
                 let dx = 0, dy = 0;
                 if (keys.a) dx = -1; if (keys.d) dx = 1; if (keys.w) dy = -1; if (keys.s) dy = 1;
                 if (dx !== 0 || dy !== 0) {
-                    const magnitude = Math.sqrt(dx*dx + dy*dy), projectileSpeed = 7;
-                    const velocity = { x: (dx / magnitude) * projectileSpeed, y: (dy / magnitude) * projectileSpeed };
-                    projectiles.push(new Projectile(player.x, player.y, 4, 'white', velocity));
+                    const magnitude = Math.sqrt(dx*dx + dy*dy); const projectileSpeed = 7;
+                    const baseVelocity = { x: (dx / magnitude) * projectileSpeed, y: (dy / magnitude) * projectileSpeed };
+                    projectiles.push(new Projectile(player.x, player.y, 4, 'white', baseVelocity));
+                    const multiShotLevel = weaponUpgrades.multiShot.level;
+                    if (multiShotLevel > 0) {
+                        const spreadAngle = 0.2; 
+                        for(let i=1; i <= multiShotLevel; i++) {
+                            const angle = Math.atan2(baseVelocity.y, baseVelocity.x);
+                            const vel1 = { x: Math.cos(angle - spreadAngle * i) * projectileSpeed, y: Math.sin(angle - spreadAngle * i) * projectileSpeed };
+                            projectiles.push(new Projectile(player.x, player.y, 4, 'white', vel1));
+                            const vel2 = { x: Math.cos(angle + spreadAngle * i) * projectileSpeed, y: Math.sin(angle + spreadAngle * i) * projectileSpeed };
+                            projectiles.push(new Projectile(player.x, player.y, 4, 'white', vel2));
+                        }
+                    }
                     sfx.shoot.triggerAttackRelease("C7", "0.1");
                     lastShotTime = now;
                 }
             }
             powerUpStatusEl.innerHTML = activePowerUps.map(p => `<div><span class="font-bold">${p.name}</span>: ${((p.expiryTime - Date.now()) / 1000).toFixed(1)}s</div>`).join('');
             powerUps.forEach((p, i) => { p.draw(); if (Math.hypot(player.x - p.x, player.y - p.y) - p.radius - player.radius < 1) { activatePowerUp(p.type); powerUps.splice(i, 1); } });
+            healthDrops.forEach((h, i) => { h.draw(); if (Math.hypot(player.x - h.x, player.y - h.y) - h.radius - player.radius < 1) { if(player.health < player.maxHealth) { player.health++; updateHealthBar(); sfx.heal.triggerAttackRelease("A5", "0.2");} healthDrops.splice(i, 1); } });
             shockwaves.forEach((sw, i) => { sw.update(); if (sw.radius > sw.maxRadius) shockwaves.splice(i, 1); else enemies.forEach((enemy, enemyIndex) => { if(Math.hypot(sw.x - enemy.x, sw.y - enemy.y) < sw.radius) { score += (enemy.maxHealth * 50); scoreEl.textContent = score; enemies.splice(enemyIndex, 1); } }); });
             [...collectibles, ...coinsArr].forEach((item, i) => {
                 if(isMagnetActive) { const angle = Math.atan2(player.y - item.y, player.x - item.x); item.x += Math.cos(angle) * 5; item.y += Math.sin(angle) * 5; }
@@ -715,34 +917,39 @@
                 }
             });
             particles.forEach((p, i) => { if (p.alpha <= 0) particles.splice(i, 1); else p.update(); });
-            projectiles.forEach((p, i) => { p.update(); if (p.x + p.radius < 0 || p.x - p.radius > canvas.width || p.y + p.radius < 0 || p.y - p.radius > canvas.height) setTimeout(() => projectiles.splice(i, 1), 0); });
-            obstacles.forEach((o, i) => { o.update(); if (o.isActive && o.lifetime <= 0) obstacles.splice(i, 1); if ( o.isActive && !player.isImmune && !isGodMode && player.x + player.radius > o.x && player.x - player.radius < o.x + o.width && player.y + player.radius > o.y && player.y - player.radius < o.y + o.height ) endGame(); });
+            projectiles.forEach((p, i) => { p.update(); if (p.x + p.radius < 0 || p.x - p.radius > canvas.width || p.y + p.radius < 0 || p.y - p.radius > canvas.height || (p.bounces < 0)) setTimeout(() => projectiles.splice(i, 1), 0); });
+            obstacles.forEach((o, i) => { o.update(); if (o.isActive && o.lifetime <= 0) obstacles.splice(i, 1); if ( o.isActive && player.x + player.radius > o.x && player.x - player.radius < o.x + o.width && player.y + player.radius > o.y && player.y - player.radius < o.y + o.height ) { player.takeDamage(1); obstacles.splice(i,1); } });
             enemies.forEach((enemy, eIndex) => { 
                 projectiles.forEach((projectile, pIndex) => {
                     const dist = Math.hypot(projectile.x - enemy.x, projectile.y - enemy.y);
                     const hitboxRadius = (enemy instanceof TriangleEnemy || enemy instanceof AsteroidEnemy) ? enemy.size : enemy.radius;
-                    if (dist - hitboxRadius - projectile.radius < 1) {
+                    if (dist - hitboxRadius - projectile.radius < 1 && !(projectile.piercedEnemies && projectile.piercedEnemies.includes(enemy))) {
                         sfx.hit.triggerAttackRelease("C3", "0.1");
                         for (let i = 0; i < enemy.radius * 0.5; i++) particles.push(new Particle(projectile.x, projectile.y, Math.random() * 2, enemy.color, { x: (Math.random() - 0.5) * (Math.random() * 6), y: (Math.random() - 0.5) * (Math.random() * 6) }));
-                        enemy.health -= 1;
+                        enemy.health -= projectile.damage;
                         if (enemy.health <= 0) {
                             for (let i = 0; i < enemy.radius * 2; i++) particles.push(new Particle(enemy.x, enemy.y, Math.random() * 3, enemy.color, { x: (Math.random() - 0.5) * (Math.random() * 8), y: (Math.random() - 0.5) * (Math.random() * 8) }));
                             score += enemy.maxHealth * 50; scoreEl.textContent = score;
+                            if (Math.random() < 0.1) healthDrops.push(new HealthDrop(enemy.x, enemy.y, 8));
                             setTimeout(() => enemies.splice(eIndex, 1), 0);
                         }
-                        setTimeout(() => projectiles.splice(pIndex, 1), 0);
+                        if (projectile instanceof RicochetProjectile) {
+                            projectile.piercedEnemies.push(enemy);
+                        } else {
+                            setTimeout(() => projectiles.splice(pIndex, 1), 0);
+                        }
                     }
                 });
                 enemy.update(speedModifier, isTimeStopped); 
                 const dist = Math.hypot(player.x - enemy.x, player.y - enemy.y);
                 const hitboxRadius = (enemy instanceof TriangleEnemy || enemy instanceof AsteroidEnemy) ? enemy.size : enemy.radius; 
-                if (dist - hitboxRadius - player.radius < 1 && !player.isImmune && !isGodMode) endGame(); 
+                if (dist - hitboxRadius - player.radius < 1) { player.takeDamage(1); setTimeout(() => enemies.splice(eIndex, 1), 0); } 
             });
         }
         function endGame() {
             if (!isGameRunning) return;
             document.body.style.cursor = 'default'; isGameRunning = false; Tone.Transport.stop(); sfx.gameOver.triggerAttackRelease("C2", "0.5"); cancelAnimationFrame(animationId);
-            clearInterval(spawnInterval); clearInterval(difficultyIncreaseInterval); clearInterval(collectibleInterval); clearInterval(powerUpInterval); clearInterval(coinInterval); clearInterval(obstacleInterval);
+            clearInterval(spawnInterval); clearInterval(difficultyIncreaseInterval); clearInterval(collectibleInterval); clearInterval(powerUpInterval); clearInterval(coinInterval); clearInterval(obstacleInterval); clearInterval(regenInterval);
             totalCoins += coins; if (gameTime > (highScores[currentStageId] || 0)) highScores[currentStageId] = gameTime;
             const currentStageData = STAGES[currentStageId];
             if (currentStageData && score >= currentStageData.scoreToUnlockNext && currentStageData.nextStage && !unlockedStages.includes(currentStageData.nextStage)) unlockedStages.push(currentStageData.nextStage);
@@ -752,11 +959,49 @@
         async function startGame(stageId) { if (Tone.context.state !== 'running') { await Tone.start(); setupAudio(); } document.body.style.cursor = 'none'; isGameRunning = true; Tone.Transport.start(); init(stageId); animate(); stageSelectionModalEl.style.display = 'none'; gameUi.style.display = 'flex'; }
         playBtn.addEventListener('click', () => { modalEl.style.display = 'none'; renderStageSelection(); stageSelectionModalEl.style.display = 'flex'; });
         closeStageBtn.addEventListener('click', () => { stageSelectionModalEl.style.display = 'none'; modalEl.style.display = 'flex'; });
-        upgradeBtn.addEventListener('click', () => { modalEl.style.display = 'none'; renderUpgrades(); upgradeModalEl.style.display = 'flex'; });
+        upgradeBtn.addEventListener('click', () => { 
+            modalEl.style.display = 'none'; 
+            renderUpgrades(); 
+            // Reset to first tab
+            const tabs = [tabPlayer, tabWeapon, tabPowerup];
+            const contents = [contentPlayer, contentWeapon, contentPowerup];
+            tabs.forEach((t, i) => {
+                t.classList.remove('border-green-400', 'text-green-300', 'border-amber-400', 'text-amber-300', 'border-indigo-400', 'text-indigo-300');
+                t.classList.add('border-transparent', 'text-gray-400', 'hover:text-gray-200', 'hover:border-gray-400');
+                contents[i].classList.add('hidden');
+            });
+            tabs[0].classList.add('border-green-400', 'text-green-300');
+            tabs[0].classList.remove('border-transparent', 'text-gray-400');
+            contents[0].classList.remove('hidden');
+            upgradeModalEl.style.display = 'flex'; 
+        });
         closeUpgradeBtn.addEventListener('click', () => { upgradeModalEl.style.display = 'none'; modalEl.style.display = 'flex'; });
         mainResetBtn.addEventListener('click', () => confirmResetModalEl.style.display = 'flex');
         glossaryBtn.addEventListener('click', () => { modalEl.style.display = 'none'; renderGlossary(); glossaryModalEl.style.display = 'flex'; });
         closeGlossaryBtn.addEventListener('click', () => { glossaryModalEl.style.display = 'none'; modalEl.style.display = 'flex'; });
+
+        const tabs = [tabPlayer, tabWeapon, tabPowerup];
+        const contents = [contentPlayer, contentWeapon, contentPowerup];
+        tabs.forEach((tab, index) => {
+            tab.addEventListener('click', () => {
+                tabs.forEach(t => {
+                    t.classList.remove('border-green-400', 'text-green-300', 'border-amber-400', 'text-amber-300', 'border-indigo-400', 'text-indigo-300');
+                    t.classList.add('border-transparent', 'text-gray-400', 'hover:text-gray-200', 'hover:border-gray-400');
+                });
+                contents.forEach(c => c.classList.add('hidden'));
+
+                const [activeBorder, activeText] = [
+                    ['border-green-400', 'text-green-300'],
+                    ['border-amber-400', 'text-amber-300'],
+                    ['border-indigo-400', 'text-indigo-300']
+                ][index];
+                
+                tab.classList.remove('border-transparent', 'text-gray-400');
+                tab.classList.add(activeBorder, activeText);
+                contents[index].classList.remove('hidden');
+            });
+        });
+
         window.addEventListener('keydown', (e) => { if (['w', 'a', 's', 'd'].includes(e.key.toLowerCase())) keys[e.key.toLowerCase()] = true; if (e.key.toLowerCase() === 'f') modMenuEl.style.display = modMenuEl.style.display === 'none' ? 'flex' : 'none'; });
         window.addEventListener('keyup', (e) => { if (['w', 'a', 's', 'd'].includes(e.key.toLowerCase())) keys[e.key.toLowerCase()] = false; });
         closeModMenuBtn.addEventListener('click', () => { modMenuEl.style.display = 'none'; });

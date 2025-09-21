@@ -6,15 +6,18 @@
 
 ---
 
-## ▶️ Play Now
+## 🎮 Two Game Modes
 
-You can play the game directly in your browser:  
-**[vitoretur.github.io/OrbeFugaz/game.html](https://vitoretur.github.io/OrbeFugaz/game.html)**  
-*Gameplay is entirely mouse-based.*
+Orbe Fugaz now offers **two distinct versions**:
+
+| Version | Description | Link |
+|--------|-------------|------|
+| 🌌 **Classic Mode** | Pure survival experience — dodge enemies, collect, upgrade | [Play Classic](https://vitoretur.github.io/OrbeFugaz/game.html) |
+| 🚀 **Shooter Mode** | Arcade-style shooter — destroy enemies, unlock weapons | [Play Shooter](https://vitoretur.github.io/OrbeFugaz/gameshooter.html) |
 
 ---
 
-## 🧩 Features
+## 🧩 Features (Classic Mode)
 
 - 🎮 Fluid and responsive gameplay  
 - 🌀 Multiple unlockable stages with unique identities  
@@ -60,7 +63,7 @@ You can play the game directly in your browser:
 
 ## 📦 About
 
-Minimalist cosmic survival game with rogue-like progression, strategic power-ups, and unlockable stages.
+Minimalist cosmic survival game with rogue-like progression, strategic power-ups, and unlockable stages. Now available in two flavors: survival and shooter.
 
 ---
 
