@@ -6,6 +6,14 @@
 
 ---
 
+## ▶️ Play Now
+
+You can play the game directly in your browser:  
+**[vitoretur.github.io/OrbeFugaz/game.html](https://vitoretur.github.io/OrbeFugaz/game.html)**  
+*Gameplay is entirely mouse-based.*
+
+---
+
 ## 🧩 Features
 
 - 🎮 Fluid and responsive gameplay  
@@ -19,10 +27,9 @@
 
 ## 🚀 How to Play
 
-1. Clone or download the repository  
-2. Open `orbe-fugaz.html` in any modern browser  
-3. Use your mouse to control the orb  
-4. Survive, collect, upgrade, and unlock new phases  
+1. Open the game link above in any modern browser  
+2. Use your mouse to control the orb  
+3. Survive, collect, upgrade, and unlock new phases  
 
 ---
 
